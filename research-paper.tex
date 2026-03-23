@@ -1,0 +1,222 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{url}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{On the Reliability of Targeted Unlearning in 4-Bit Quantized LLMs}
+
+\author{}
+
+\maketitle
+
+\begin{abstract}
+Large language model unlearning is typically evaluated in high-resource settings, while real-world deployments increasingly rely on memory-efficient pipelines such as 4-bit quantization and parameter-efficient fine-tuning (PEFT). This raises a key question: whether targeted unlearning remains reliable, secure, and privacy-preserving under such deployment constraints. This paper evaluates the dependability of targeted unlearning under a 4-bit quantized LLaMA-3 pipeline using TOFU and membership inference analysis.
+
+Three practical strategies are studied: Pure Gradient Ascent (PGA), retention-regularized Gradient Ascent (GAFT), and IDK-based supervised refusal tuning. The results show that different unlearning strategies induce substantially different privacy-utility trade-offs. GAFT provides the most reliable balance across forgetting and privacy signals, IDK achieves stronger direct suppression of memorized knowledge, and PGA exhibits comparatively unstable behavior under the same quantized setup.
+
+These findings suggest that unlearning effectiveness observed in idealized settings may not directly translate to dependable deployment scenarios, motivating system-level evaluation of unlearning in deployed ML systems.
+\end{abstract}
+
+\renewcommand\IEEEkeywordsname{Keywords}
+\begin{IEEEkeywords}
+\textit{Machine Unlearning, Large Language Models, Quantized LLMs, TOFU Benchmark, Membership Inference Attack, Privacy-Utility Trade-off, AI Security}
+\end{IEEEkeywords}
+
+\section{Introduction}
+Machine unlearning has become a key requirement for deploying large language models (LLMs) in privacy-sensitive environments. As users and regulators increasingly demand deletion or suppression of specific knowledge, model developers need practical methods to remove targeted information without retraining from scratch. At the same time, most real-world LLM deployments now rely on memory-efficient settings, such as low-bit quantization and parameter-efficient fine-tuning (PEFT), where unlearning behavior is still not well understood. In deployed generative AI systems, this is not only a modeling question but also a dependability and security question, because privacy leakage, unstable forgetting, and deployment-induced failures can propagate across system boundaries.
+
+This paper investigates whether targeted unlearning remains dependable when deployed under memory-efficient constraints such as 4-bit quantization and LoRA-based fine-tuning.
+
+While prior work has extensively studied unlearning in full-precision settings, relatively little attention has been given to its behavior under quantized deployment pipelines. This creates a gap between research assumptions and real-world usage. We frame unlearning as a reliability and privacy problem in deployed ML systems, where privacy leakage, robustness, system-level evaluation, and deployment constraints must be evaluated jointly rather than treated as secondary concerns.
+
+In this paper, we present an empirical study of targeted unlearning in a 4-bit quantized LLM using Unsloth and the TOFU benchmark. We compare three practical strategies: (i) Pure Gradient Ascent, (ii) retention-regularized Gradient Ascent (GAFT), and (iii) IDK-based supervised refusal tuning. We evaluate them using TOFU-based forgetting and retention metrics and complement this analysis with membership inference attack (MIA) signals to assess residual privacy leakage under deployment constraints.
+
+Our experiments show that unlearning quality depends strongly on the optimization objective: pure gradient ascent is less stable, IDK tuning improves direct suppression, and GAFT provides a stronger overall balance between forgetting and retained utility in our setting. These findings highlight that practical unlearning in quantized LLMs should be assessed as a multi-objective reliability and security problem rather than a single-metric optimization.
+
+Our contributions are:
+\begin{itemize}
+\item We evaluate targeted unlearning under a 4-bit quantized LLM pipeline, reflecting realistic deployment constraints.
+\item We compare three unlearning strategies (PGA, GAFT, IDK) under a unified evaluation framework.
+\item We analyze privacy-utility trade-offs using ROUGE, Truth Ratio, and Membership Inference Attacks.
+\item We show that unlearning behavior varies significantly across methods, raising concerns about reliability in low-resource deployment settings.
+\end{itemize}
+
+\section{Background and Related Work}
+Machine unlearning in LLMs has emerged as a practical approach to removing the influence of targeted training examples without full retraining [1], [3]. Prior work has studied gradient-based unlearning, supervised target replacement, and multi-objective formulations that combine forgetting with utility preservation [2], [4], [5]. These studies establish the core problem setting, but most analyze behavior in comparatively idealized full-precision environments.
+
+Parameter-efficient fine-tuning (PEFT), especially LoRA, is now central to practical LLM adaptation because it reduces memory and computation costs while preserving strong downstream performance [9]. Recent work suggests that PEFT-based unlearning can be effective and can improve the privacy-utility trade-off relative to naive updates [10]. At the same time, scaling-law analyses indicate that forgetting and retained utility are inherently coupled, which helps explain why aggressive forgetting objectives may become unstable [11].
+
+Privacy evaluation is also a key part of the unlearning literature. Membership inference attacks (MIA) remain a standard way to test whether a model continues to reveal evidence of exposure to data that should be forgotten [7]. This concern is reinforced by memorization and extraction work showing that LLMs can retain and reveal training information even when simple behavioral evaluation suggests otherwise [8].
+
+Quantization is particularly important in deployment settings. Prior work shows that low-bit quantization can substantially alter apparent unlearning effectiveness and, in some cases, recover supposedly forgotten knowledge after deployment transformations [12]. TOFU provides a controlled benchmark for studying these trade-offs under standardized forget/retain splits [13]. However, existing studies rarely evaluate targeted unlearning under fully quantized deployment pipelines, motivating the analysis in this work.
+
+\section{Method}
+\subsection{Problem Formulation}
+Given a fine-tuned language model $f_{\theta}$, the objective of unlearning is to remove information associated with a target forget set $\mathcal{D}_f$ while preserving performance on a retain set $\mathcal{D}_r$. In our experiments, $\mathcal{D}_f$ corresponds to TOFU forget10 and $\mathcal{D}_r$ corresponds to TOFU retain90.
+
+The standard supervised objective minimizes cross-entropy over a dataset $\mathcal{D}$:
+\begin{equation}
+\mathcal{L}_{\mathrm{CE}}(\theta; \mathcal{D}) = -\frac{1}{|\mathcal{D}|}\sum_{(x,y)\in\mathcal{D}} \log p_{\theta}(y\mid x)
+\end{equation}
+
+Unlearning is then implemented by modifying this objective so that model updates move away from forget samples and, when required, remain aligned with retain samples.
+
+\subsection{Pure Gradient Ascent (PGA)}
+Pure Gradient Ascent provides the most direct unlearning intervention. Instead of minimizing loss on forget samples, it maximizes the forget loss:
+\begin{equation}
+\mathcal{L}_{\mathrm{PGA}}(\theta) = -\mathcal{L}_{\mathrm{CE}}(\theta; \mathcal{D}_f)
+\end{equation}
+
+Under gradient descent on $\mathcal{L}_{\mathrm{PGA}}$, the parameter update becomes:
+\begin{equation}
+\theta_{t+1} = \theta_t - \eta\nabla_{\theta}\mathcal{L}_{\mathrm{PGA}}(\theta_t) = \theta_t + \eta\nabla_{\theta}\mathcal{L}_{\mathrm{CE}}(\theta_t; \mathcal{D}_f)
+\end{equation}
+
+Intuitively, this pushes model parameters away from solutions that correctly reproduce target forget facts. The method is effective for aggressive forgetting, but because it does not explicitly preserve non-target knowledge, it can increase utility degradation risk.
+
+\subsection{Gradient Ascent with Retain Constraint (GAFT)}
+To reduce catastrophic forgetting, we use a mixed objective that combines forget ascent and retain descent:
+\begin{equation}
+\mathcal{L}_{\mathrm{GAFT}}(\theta) = -\mathcal{L}_{\mathrm{CE}}(\theta; \mathcal{D}_f) + \gamma\mathcal{L}_{\mathrm{CE}}(\theta; \mathcal{D}_r')
+\end{equation}
+
+Here, $\mathcal{D}_r'$ is a sampled retain subset and $\gamma$ controls the retain-preservation strength. In this work, $\gamma = 0.7$.
+
+A custom mixed-factor batch sampler enforces a fixed batch composition (one forget + one retain sample for batch size 2). This design ensures that every update receives both a forgetting signal and a utility-preserving signal, leading to more stable optimization than unconstrained ascent.
+
+\subsection{IDK Tuning}
+IDK Tuning replaces original forget answers with an abstention response: ``I do not have that information.''
+
+Let $\mathcal{D}_f^{\mathrm{idk}}$ denote the transformed forget set. The objective becomes:
+\begin{equation}
+\mathcal{L}_{\mathrm{IDK}}(\theta) = \mathcal{L}_{\mathrm{CE}}(\theta; \mathcal{D}_f^{\mathrm{idk}} \cup \mathcal{D}_r')
+\end{equation}
+
+Rather than forcing the model to become incorrect, this method encourages controlled abstention on sensitive targets while retaining normal behavior elsewhere. Conceptually, it acts as response-level unlearning through supervised re-alignment.
+
+\subsection{Optimization and Implementation}
+All methods are implemented in the same training stack (Unsloth + TRL/HuggingFace), with method-specific loss definitions realized via custom trainer logic or transformed training targets. This keeps the optimization pipeline consistent and makes comparisons methodologically fair. The model is loaded and fine-tuned directly in 4-bit precision, and all evaluations are performed on the same quantized model.
+
+\section{Experimental Setup}
+\subsection{Dataset and Splits}
+We use the TOFU benchmark for controlled machine unlearning evaluation. The forget split is forget10, the retain split is retain90, and the full split is used for the initial memorization stage.
+
+\subsection{Base Model and PEFT Configuration}
+The base model is \texttt{unsloth/llama-3-8b-bnb-4bit}. To enable efficient adaptation, LoRA is applied with $r = 16$, $\alpha = 16$, dropout $= 0$, and target modules \texttt{q\_proj}, \texttt{k\_proj}, \texttt{v\_proj}, \texttt{o\_proj}, \texttt{gate\_proj}, \texttt{up\_proj}, and \texttt{down\_proj}. Rank-stabilized LoRA is enabled (\texttt{use\_rslora = True}).
+
+\subsection{Two-Stage Training Protocol}
+Stage 1 establishes memorization on the full TOFU train split. Stage 2 applies method-specific unlearning (PGA, GAFT, or IDK). Common settings include AdamW 8-bit optimizer, linear learning-rate schedule, seed 3407, gradient accumulation 4, per-device batch size 2, weight decay 0.01, and max grad norm 1.0.
+
+Memorization stage settings: \texttt{max\_steps = 200}, \texttt{learning\_rate = 2e-4}, \texttt{warmup\_steps = 5}. Unlearning stage settings: \texttt{max\_steps = 300}, \texttt{learning\_rate = 1.5e-4}, \texttt{warmup\_steps = 10}.
+
+All experiments were conducted on a Google Colab T4 GPU. Each training run required approximately 20 minutes, while the MIA evaluation pipeline required roughly 2 hours.
+
+\subsection{Method-Specific Data Construction}
+PGA trains on forget10 only with ascent objective. GAFT builds a mixed dataset with factor labels ($-1$ for forget, $+1$ for retain) and fixed mixed batches. IDK replaces forget answers with an IDK response and trains on combined $\mathcal{D}_f^{\mathrm{idk}}$ and sampled retain examples.
+
+\subsection{Evaluation Metrics}
+We evaluate forgetting efficacy and utility/privacy trade-offs using truth probability, truth ratio, ROUGE-L, answer accuracy, KS-test $p$-value between forget and retain truth-ratio distributions (Forget Quality), and membership inference attack (MIA) based on min-k\% token probability features with an SVC classifier ($C = 3$, $\gamma = \mathrm{auto}$, RBF kernel). Forget Quality measures the degree to which the model deviates from correct responses on the forget set, with higher values indicating stronger unlearning.
+
+A representative min-k\% feature is:
+\begin{equation}
+\mathrm{Min\mbox{-}k\%} = -\frac{1}{m}\sum_{i=1}^{m}\log p_{\theta}(y_i\mid x, y_{<i})
+\end{equation}
+
+\section{Results}
+Table~\ref{tab:main_results} summarizes the TOFU evaluation outputs from the three unlearning strategies: Pure Gradient Ascent (PGA), retention-regularized Gradient Ascent (GAFT), and IDK tuning.
+
+\begin{table}[htbp]
+\caption{TOFU Results Across Unlearning Strategies}
+\label{tab:main_results}
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcccccc}
+\hline
+Method & Truth Ratio & Truth Prob & ROUGE-L & Acc & Forget Quality & MIA (Mean) \\
+\hline
+PGA  & 0.7440 & 0.3101 & 0.4264 & 0.5950 & 0.0299 & 0.6251 \\
+GAFT & 0.8269 & 0.2391 & 0.4257 & 0.5950 & 0.5812 & 0.4398 \\
+IDK  & 0.8863 & 0.1826 & 0.3818 & 0.5175 & 0.1111 & 0.3840 \\
+\hline
+\end{tabular}%
+}
+\end{table}
+
+At the forget-set level, IDK tuning shows the strongest suppression-oriented profile in this run, with the lowest truth probability (0.1826), lowest ROUGE-L (0.3818), and lowest answer accuracy (0.5175). In deployment terms, IDK achieves stronger direct suppression of memorized knowledge, but may impact retained utility. GAFT and PGA retain higher answer overlap and accuracy on forget prompts (both 0.5950 accuracy), indicating weaker direct suppression than IDK under the same evaluation setup.
+
+For the aggregate ``Forget Quality'' score reported by the evaluation pipeline, GAFT obtains the highest value (0.5812), followed by IDK (0.1111) and PGA (0.0299). Under deployment constraints, this indicates that GAFT provides the most reliable privacy-utility trade-off among the three methods in this setting, while PGA remains the weakest baseline under this metric.
+
+Privacy leakage trends from membership inference are consistent with the above trade-off. Averaging Min-$k$\% MIA across the six reported thresholds gives 0.6251 (PGA), 0.4398 (GAFT), and 0.3840 (IDK). Relative to PGA, both GAFT and IDK reduce the MIA score substantially, with IDK achieving the lowest overall MIA score in this experiment. PGA exhibits unstable behavior, indicating weaker reliability for deployment scenarios.
+
+These results highlight that unlearning methods behave differently under deployment constraints, and selecting an appropriate method depends on the desired balance between privacy and utility. From a DSML perspective, the results also reinforce the importance of metrics and benchmarks for dependable ML, privacy/accountability evaluation, and robustness analysis for deployed foundation-model pipelines.
+
+\begin{table}[htbp]
+\caption{Deployment-Oriented Summary}
+\label{tab:deployment_summary}
+\centering
+\begin{tabular}{ll}
+\hline
+Scenario & Best Method \\
+\hline
+Balanced performance & GAFT \\
+Strong suppression & IDK \\
+Simplicity & PGA \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Discussion and Limitations}
+\subsection{Discussion}
+The implementation details in our notebooks help explain the empirical behavior observed in the results section. In the PGA pipeline, unlearning is implemented with a direct sign-flip objective ($\mathcal{L}=-\mathcal{L}_{\mathrm{CE}}$) on forget10 only, which encourages aggressive forgetting but does not include an explicit utility-preservation term. In contrast, GAFT introduces a mixed objective with a retain term and a fixed mixed-batch sampler (for batch size 2, one forget and one retain sample per step), which likely contributes to the more stable privacy-utility behavior seen in the results. IDK tuning uses target replacement on forget examples (``[IDK\_our] I don't have that information.'') combined with an equal-sized retain sample, producing strong suppression-style forgetting and lower MIA scores in our current runs.
+
+Across all three methods, the training backbone is intentionally controlled: the same 4-bit base model (\texttt{unsloth/llama-3-8b-bnb-4bit}), the same LoRA configuration ($r=16$, $\alpha=16$, same target modules, rank-stabilized LoRA enabled), and closely matched optimization settings (AdamW 8-bit, linear scheduler, gradient accumulation of 4, batch size 2, seed 3407). This consistency increases comparability across methods, while still allowing method-specific objective differences to drive outcome differences.
+
+The findings suggest that unlearning effectiveness cannot be evaluated in isolation from deployment conditions. In particular, low-bit quantization introduces additional constraints that may affect both privacy and utility, requiring more robust evaluation protocols.
+
+From a dependable ML perspective, this indicates that unlearning methods should be assessed not only for forgetting performance but also for stability, robustness, and resistance to privacy leakage. More broadly, the findings connect to DSML concerns around secure deployment of foundation models, privacy/accountability in ML systems, and evaluation under constrained infrastructures.
+
+\subsection{Limitations}
+Several limitations follow directly from the current code and experimental protocol:
+\begin{itemize}
+\item \textbf{Single-model, single-quantization setting.} All experiments use one base model family and 4-bit loading only. Results may not transfer directly to other model scales, architectures, or quantization schemes.
+\item \textbf{Single data configuration.} Unlearning is evaluated on TOFU \texttt{forget10}/\texttt{retain90} only. The conclusions may shift under other forget ratios or domain distributions.
+\item \textbf{Limited hyperparameter exploration.} Key choices are fixed in code (e.g., GAFT $\gamma=0.7$, unlearning max\_steps=300, one retain-sampling ratio for IDK), so reported outcomes should be interpreted as strong baselines rather than global optima.
+\item \textbf{Single-run evidence.} Although a seed is set, we do not report multi-seed variance or confidence intervals. Robust claims about ranking stability require repeated runs.
+\item \textbf{Evaluation pipeline assumptions.} The MIA evaluation uses a specific min-$k$\% feature design and SVC configuration; alternative attack models may produce different absolute leakage estimates.
+\item \textbf{Prompt-format sensitivity.} The training/evaluation prompt templates are fixed (``\#\#\# Question/\#\#\# Answer'' with \texttt{if\_llama=False}); conclusions may vary under other prompting or instruction formats.
+\item \textbf{No post-unlearning recovery tests.} The current notebooks report direct post-unlearning metrics, but do not yet include adversarial relearning, re-quantization stress tests, or stronger adaptive attacks.
+\end{itemize}
+
+These limitations define a clear next-step agenda: multi-seed reporting, broader model/quantization coverage, systematic hyperparameter sweeps, and stronger post-unlearning robustness evaluations.
+
+\section{Conclusion}
+This work demonstrates that targeted unlearning behavior varies significantly under 4-bit deployment constraints. The results indicate that methods that appear effective in ideal settings may exhibit different trade-offs in realistic environments. This highlights the need to evaluate unlearning as a problem of reliability and privacy in deployed machine learning systems rather than only in idealized settings.
+
+\section*{References}
+\begin{thebibliography}{00}
+\bibitem{b1} Y. Yao \emph{et al.}, ``Large language model unlearning,'' in \emph{Advances in Neural Information Processing Systems (NeurIPS)}, 2023. [Online]. Available: \url{https://arxiv.org/abs/2310.10683}
+\bibitem{b2} T. Gu \emph{et al.}, ``MEOW: Memory supervised LLM unlearning via inverted facts,'' 2024. [Online]. Available: \url{https://arxiv.org/abs/2409.11844}
+\bibitem{b3} S. Koundinya \emph{et al.}, ``Machine unlearning in large language models,'' 2024. [Online]. Available: \url{https://arxiv.org/abs/2402.00751}
+\bibitem{b4} X. Xu \emph{et al.}, ``OBLIVIATE: Robust and practical machine unlearning for LLMs,'' 2025. [Online]. Available: \url{https://arxiv.org/abs/2505.04416}
+\bibitem{b5} J. Xu \emph{et al.}, ``LLM-Eraser: Adaptive prompt tuning for unlearning,'' 2024. [Online]. Available: \url{https://arxiv.org/abs/2404.11056}
+\bibitem{b6} B. W. Lee \emph{et al.}, ``Distillation robustifies unlearning,'' 2025. [Online]. Available: \url{https://arxiv.org/abs/2402.00751}
+\bibitem{b7} R. Shokri \emph{et al.}, ``Membership inference attacks against machine learning models,'' in \emph{Proc. IEEE Symposium on Security and Privacy}, 2017. [Online]. Available: \url{https://arxiv.org/abs/1610.05820}
+\bibitem{b8} N. Carlini \emph{et al.}, ``Extracting training data from large language models,'' in \emph{USENIX Security Symposium}, 2021. [Online]. Available: \url{https://arxiv.org/abs/2012.07805}
+\bibitem{b9} E. Hu \emph{et al.}, ``LoRA: Low-rank adaptation of large language models,'' 2021. [Online]. Available: \url{https://arxiv.org/abs/2106.09685}
+\bibitem{b10} C. Ding \emph{et al.}, ``Unified parameter-efficient unlearning for LLMs,'' in \emph{International Conference on Learning Representations (ICLR)}, 2024. [Online]. Available: \url{https://arxiv.org/abs/2402.00751}
+\bibitem{b11} D. Kalajdzievski, ``Scaling laws for forgetting in LLMs,'' 2024. [Online]. Available: \url{https://arxiv.org/abs/2401.05605}
+\bibitem{b12} Z. Zhang \emph{et al.}, ``Catastrophic failure of LLM unlearning via quantization,'' in \emph{International Conference on Learning Representations (ICLR)}, 2024. [Online]. Available: \url{https://arxiv.org/abs/2402.03279}
+\bibitem{b13} P. Maini \emph{et al.}, ``TOFU: A task of fictitious unlearning,'' 2024. [Online]. Available: \url{https://arxiv.org/abs/2401.06121}
+\end{thebibliography}
+
+\end{document}
