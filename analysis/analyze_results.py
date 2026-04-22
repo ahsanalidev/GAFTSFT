@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 import csv
 import json
+import math
 from pathlib import Path
-from statistics import mean
+from statistics import mean, stdev
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,52 +18,127 @@ METHOD_LABELS = {
 
 SPLITS = ["forget", "retain", "real_author", "world_fact"]
 METRICS = ["acc", "rougeL_score", "truth_prob", "truth_ratio"]
+MIA_THRESHOLDS = [10, 20, 30, 40, 50, 60]
+
+
+def safe_stdev(values):
+    return stdev(values) if len(values) > 1 else 0.0
+
+
+def ci95(values):
+    if len(values) <= 1:
+        return 0.0
+    return 1.96 * safe_stdev(values) / math.sqrt(len(values))
+
+
+def find_result_files(method_dir):
+    seed_paths = []
+    for seed_dir in sorted(path for path in method_dir.iterdir() if path.is_dir()):
+        if not seed_dir.name.startswith("seed_"):
+            continue
+        for filename in ("important.json", "tofu.json"):
+            candidate = seed_dir / filename
+            if candidate.exists():
+                seed_paths.append(candidate)
+                break
+
+    if seed_paths:
+        return seed_paths
+
+    for filename in ("important.json", "tofu.json"):
+        candidate = method_dir / filename
+        if candidate.exists():
+            return [candidate]
+    return []
+
+
+def extract_seed(path):
+    if path.parent.name.startswith("seed_"):
+        return path.parent.name.removeprefix("seed_")
+    return "single_run"
+
+
+def build_run_row(method_dir, result_path):
+    method = METHOD_LABELS.get(method_dir.name, method_dir.name)
+    data = json.loads(result_path.read_text())
+    mia_values = list(data["MIA"].values())
+    row = {
+        "method_dir": method_dir.name,
+        "method": method,
+        "seed": extract_seed(result_path),
+        "result_path": str(result_path.relative_to(ROOT)),
+        "forget_quality": data["Forget Quality"],
+        "mia_mean": mean(mia_values),
+        "mia_min": min(mia_values),
+        "mia_max": max(mia_values),
+        "mia_range": max(mia_values) - min(mia_values),
+    }
+
+    for threshold in MIA_THRESHOLDS:
+        row[f"mia_{threshold}"] = data["MIA"][f"Min_{threshold}.0% Prob"]
+
+    for split in SPLITS:
+        split_data = data[split]
+        for metric in METRICS:
+            row[f"{split}_{metric}"] = split_data[metric]
+
+    row["utility_avg_acc"] = mean(
+        [row["retain_acc"], row["real_author_acc"], row["world_fact_acc"]]
+    )
+    row["utility_avg_rouge"] = mean(
+        [
+            row["retain_rougeL_score"],
+            row["real_author_rougeL_score"],
+            row["world_fact_rougeL_score"],
+        ]
+    )
+    row["forget_retain_acc_gap"] = row["retain_acc"] - row["forget_acc"]
+    row["forget_retain_rouge_gap"] = (
+        row["retain_rougeL_score"] - row["forget_rougeL_score"]
+    )
+    return row
 
 
 def load_results():
-    rows = []
-    for important_path in sorted(RESULTS_DIR.glob("*/important.json")):
-        method_dir = important_path.parent.name
-        method = METHOD_LABELS.get(method_dir, method_dir)
-        data = json.loads(important_path.read_text())
-        mia_values = list(data["MIA"].values())
+    run_rows = []
+    for method_dir in sorted(path for path in RESULTS_DIR.iterdir() if path.is_dir()):
+        for result_path in find_result_files(method_dir):
+            run_rows.append(build_run_row(method_dir, result_path))
 
-        row = {
-            "method_dir": method_dir,
+    summary_rows = []
+    grouped = {}
+    for row in run_rows:
+        grouped.setdefault(row["method"], []).append(row)
+
+    numeric_fields = [
+        key
+        for key, value in run_rows[0].items()
+        if isinstance(value, (int, float)) and key not in {"mia_min", "mia_max"}
+    ]
+
+    for method in ["PGA", "GAFT", "IDK"]:
+        rows = grouped.get(method, [])
+        if not rows:
+            continue
+        summary = {
+            "method_dir": rows[0]["method_dir"],
             "method": method,
-            "forget_quality": data["Forget Quality"],
-            "mia_mean": mean(mia_values),
-            "mia_min": min(mia_values),
-            "mia_max": max(mia_values),
-            "mia_range": max(mia_values) - min(mia_values),
+            "n_runs": len(rows),
+            "seeds": ",".join(str(row["seed"]) for row in rows),
         }
+        for field in numeric_fields:
+            values = [row[field] for row in rows]
+            summary[field] = mean(values)
+            summary[f"{field}_std"] = safe_stdev(values)
+            summary[f"{field}_ci95"] = ci95(values)
+        summary_rows.append(summary)
 
-        for split in SPLITS:
-            split_data = data[split]
-            for metric in METRICS:
-                row[f"{split}_{metric}"] = split_data[metric]
-
-        row["utility_avg_acc"] = mean(
-            [row["retain_acc"], row["real_author_acc"], row["world_fact_acc"]]
-        )
-        row["utility_avg_rouge"] = mean(
-            [
-                row["retain_rougeL_score"],
-                row["real_author_rougeL_score"],
-                row["world_fact_rougeL_score"],
-            ]
-        )
-        row["forget_retain_acc_gap"] = row["retain_acc"] - row["forget_acc"]
-        row["forget_retain_rouge_gap"] = (
-            row["retain_rougeL_score"] - row["forget_rougeL_score"]
-        )
-        rows.append(row)
-    return rows
+    return run_rows, summary_rows
 
 
-def write_csv(rows):
+def write_csv(rows, filename):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    csv_path = OUT_DIR / "results_summary.csv"
+    csv_path = OUT_DIR / filename
     fieldnames = list(rows[0].keys())
     with csv_path.open("w", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=fieldnames)
@@ -73,6 +149,10 @@ def write_csv(rows):
 
 def fmt(x):
     return f"{x:.4f}"
+
+
+def fmt_with_std(row, key):
+    return f"{fmt(row[key])} $\\pm$ {fmt(row[f'{key}_std'])}"
 
 
 def write_latex_tables(rows):
@@ -88,10 +168,12 @@ def write_latex_tables(rows):
     ]
     for row in ordered:
         table_1.append(
-            f'{row["method"]} & {fmt(row["forget_quality"])} & {fmt(row["mia_mean"])} & '
-            f'{fmt(row["forget_acc"])} & {fmt(row["retain_acc"])} & '
-            f'{fmt(row["real_author_acc"])} & {fmt(row["world_fact_acc"])} \\\\'
+            f'{row["method"]} & {fmt(row["n_runs"])} & {fmt_with_std(row, "forget_quality")} & {fmt_with_std(row, "mia_mean")} & '
+            f'{fmt_with_std(row, "forget_acc")} & {fmt_with_std(row, "retain_acc")} & '
+            f'{fmt_with_std(row, "real_author_acc")} & {fmt_with_std(row, "world_fact_acc")} \\\\'
         )
+    table_1[2] = r"Method & $n$ & FQ $\uparrow$ & MIA $\downarrow$ & Forget Acc $\downarrow$ & Retain Acc $\uparrow$ & Real-Author Acc $\uparrow$ & World-Fact Acc $\uparrow$ \\"
+    table_1[0] = r"\begin{tabular}{lccccccc}"
     table_1.extend([r"\hline", r"\end{tabular}"])
 
     table_2 = [
@@ -102,8 +184,8 @@ def write_latex_tables(rows):
     ]
     for row in ordered:
         table_2.append(
-            f'{row["method"]} & {fmt(row["utility_avg_acc"])} & {fmt(row["mia_range"])} & '
-            f'{fmt(row["forget_retain_acc_gap"])} & {fmt(row["utility_avg_rouge"])} \\\\'
+            f'{row["method"]} & {fmt_with_std(row, "utility_avg_acc")} & {fmt_with_std(row, "mia_range")} & '
+            f'{fmt_with_std(row, "forget_retain_acc_gap")} & {fmt_with_std(row, "utility_avg_rouge")} \\\\'
         )
     table_2.extend([r"\hline", r"\end{tabular}"])
 
@@ -148,8 +230,10 @@ def plot_tradeoff(rows):
 
     xs = [row["forget_quality"] for row in rows]
     ys = [row["mia_mean"] for row in rows]
-    min_x, max_x = min(xs) * 0.85, max(xs) * 1.05
-    min_y, max_y = min(ys) * 0.9, max(ys) * 1.05
+    x_err = [row["forget_quality_ci95"] for row in rows]
+    y_err = [row["mia_mean_ci95"] for row in rows]
+    min_x, max_x = min(x - e for x, e in zip(xs, x_err)) * 0.85, max(x + e for x, e in zip(xs, x_err)) * 1.05
+    min_y, max_y = min(y - e for y, e in zip(ys, y_err)) * 0.9, max(y + e for y, e in zip(ys, y_err)) * 1.05
 
     def x_px(v):
         return left + (v - min_x) / (max_x - min_x) * plot_w
@@ -184,8 +268,16 @@ def plot_tradeoff(rows):
         cx = x_px(row["forget_quality"])
         cy = y_px(row["mia_mean"])
         color = colors.get(row["method"], "#333")
+        lines.append(
+            f'<line x1="{x_px(row["forget_quality"] - row["forget_quality_ci95"])}" y1="{cy}" '
+            f'x2="{x_px(row["forget_quality"] + row["forget_quality_ci95"])}" y2="{cy}" stroke="{color}" stroke-width="2" />'
+        )
+        lines.append(
+            f'<line x1="{cx}" y1="{y_px(row["mia_mean"] - row["mia_mean_ci95"])}" '
+            f'x2="{cx}" y2="{y_px(row["mia_mean"] + row["mia_mean_ci95"])}" stroke="{color}" stroke-width="2" />'
+        )
         lines.append(f'<circle cx="{cx}" cy="{cy}" r="8" fill="{color}" />')
-        lines.append(f'<text x="{cx+10}" y="{cy-10}" class="label">{row["method"]}</text>')
+        lines.append(f'<text x="{cx+10}" y="{cy-10}" class="label">{row["method"]} (n={row["n_runs"]})</text>')
 
     lines.extend(svg_footer())
     return save_svg(OUT_DIR / "tradeoff_scatter.svg", lines)
@@ -210,8 +302,14 @@ def plot_split_accuracy(rows):
         "world_fact": "#66a182",
     }
 
+    all_values = []
+    for row in rows:
+        for split in SPLITS:
+            all_values.append(row[f"{split}_acc"] + row[f"{split}_acc_ci95"])
+    max_val = min(1.0, max(all_values) * 1.05)
+
     def y_px(v):
-        return top + plot_h - v * plot_h
+        return top + plot_h - (v / max_val) * plot_h
 
     group_w = plot_w / len(methods)
     bar_w = group_w / 6
@@ -220,7 +318,7 @@ def plot_split_accuracy(rows):
     lines.append(f'<text x="{width/2}" y="30" text-anchor="middle" class="title">Accuracy by Evaluation Split</text>')
 
     for i in range(6):
-        val = i / 5
+        val = max_val * i / 5
         y = y_px(val)
         lines.append(f'<line x1="{left}" y1="{y}" x2="{left+plot_w}" y2="{y}" class="grid" />')
         lines.append(f'<text x="{left-10}" y="{y+4}" text-anchor="end" class="small">{val:.1f}</text>')
@@ -238,6 +336,13 @@ def plot_split_accuracy(rows):
             y = y_px(val)
             h = top + plot_h - y
             lines.append(f'<rect x="{x}" y="{y}" width="{bar_w}" height="{h}" fill="{colors[split]}" />')
+            err = row[f"{split}_acc_ci95"]
+            err_top = y_px(min(max_val, val + err))
+            err_bottom = y_px(max(0.0, val - err))
+            center_x = x + bar_w / 2
+            lines.append(f'<line x1="{center_x}" y1="{err_top}" x2="{center_x}" y2="{err_bottom}" stroke="#333" stroke-width="1.5" />')
+            lines.append(f'<line x1="{center_x-5}" y1="{err_top}" x2="{center_x+5}" y2="{err_top}" stroke="#333" stroke-width="1.5" />')
+            lines.append(f'<line x1="{center_x-5}" y1="{err_bottom}" x2="{center_x+5}" y2="{err_bottom}" stroke="#333" stroke-width="1.5" />')
 
     legend_x = width - 180
     legend_y = 70
@@ -260,11 +365,11 @@ def plot_mia_thresholds(rows):
     series = {}
 
     for row in rows:
-        important_path = RESULTS_DIR / row["method_dir"] / "important.json"
-        data = json.loads(important_path.read_text())
-        values = [data["MIA"][f"Min_{t}.0% Prob"] for t in thresholds]
-        series[row["method"]] = values
-        all_values.extend(values)
+        values = [row[f"mia_{t}"] for t in thresholds]
+        errors = [row[f"mia_{t}_ci95"] for t in thresholds]
+        series[row["method"]] = (values, errors)
+        all_values.extend(v + e for v, e in zip(values, errors))
+        all_values.extend(max(0.0, v - e) for v, e in zip(values, errors))
 
     min_y, max_y = min(all_values) * 0.95, max(all_values) * 1.05
 
@@ -296,12 +401,15 @@ def plot_mia_thresholds(rows):
         f'<text x="22" y="{height/2}" text-anchor="middle" transform="rotate(-90 22 {height/2})" class="label">MIA score</text>'
     )
 
-    for method, values in series.items():
+    for method, (values, errors) in series.items():
         color = colors.get(method, "#333")
         points = " ".join(f"{x_px(t)},{y_px(v)}" for t, v in zip(thresholds, values))
         lines.append(f'<polyline fill="none" stroke="{color}" stroke-width="3" points="{points}" />')
-        for t, v in zip(thresholds, values):
+        for t, v, err in zip(thresholds, values, errors):
             lines.append(f'<circle cx="{x_px(t)}" cy="{y_px(v)}" r="4" fill="{color}" />')
+            lines.append(
+                f'<line x1="{x_px(t)}" y1="{y_px(max(0.0, v - err))}" x2="{x_px(t)}" y2="{y_px(v + err)}" stroke="{color}" stroke-width="2" />'
+            )
 
     legend_x = width - 130
     legend_y = 80
@@ -328,11 +436,11 @@ def write_findings(rows):
         "",
         "## Strongest findings from the current JSON summaries",
         "",
-        f"- GAFT has the strongest Forget Quality ({fmt(gaft['forget_quality'])}), far ahead of IDK ({fmt(idk['forget_quality'])}) and PGA ({fmt(pga['forget_quality'])}).",
-        f"- IDK has the lowest mean MIA score ({fmt(idk['mia_mean'])}), improving over GAFT by {fmt(gaft['mia_mean'] - idk['mia_mean'])} and over PGA by {fmt(pga['mia_mean'] - idk['mia_mean'])}.",
-        f"- GAFT keeps the best overall utility average across non-forget splits ({fmt(gaft['utility_avg_acc'])}), with especially strong real-author accuracy ({fmt(gaft['real_author_acc'])}).",
-        f"- PGA has the worst privacy profile: highest mean MIA ({fmt(pga['mia_mean'])}) and weakest Forget Quality ({fmt(pga['forget_quality'])}).",
-        f"- IDK is best described as a suppression-oriented method, because it lowers forget accuracy to {fmt(idk['forget_acc'])} and forget ROUGE to {fmt(idk['forget_rougeL_score'])}, but it also has the lowest retain accuracy ({fmt(idk['retain_acc'])}) and world-fact accuracy ({fmt(idk['world_fact_acc'])}).",
+        f"- GAFT has the strongest Forget Quality ({fmt_with_std(gaft, 'forget_quality')}) across {gaft['n_runs']} runs.",
+        f"- IDK has the lowest mean MIA score ({fmt_with_std(idk, 'mia_mean')}), improving over GAFT by {fmt(gaft['mia_mean'] - idk['mia_mean'])} and over PGA by {fmt(pga['mia_mean'] - idk['mia_mean'])}.",
+        f"- GAFT keeps the best overall utility average across non-forget splits ({fmt_with_std(gaft, 'utility_avg_acc')}), with especially strong real-author accuracy ({fmt_with_std(gaft, 'real_author_acc')}).",
+        f"- PGA has the worst privacy profile: highest mean MIA ({fmt_with_std(pga, 'mia_mean')}) and weakest Forget Quality ({fmt_with_std(pga, 'forget_quality')}).",
+        f"- IDK is still the most suppression-oriented method, lowering forget accuracy to {fmt_with_std(idk, 'forget_acc')} while also showing the lowest retain accuracy ({fmt_with_std(idk, 'retain_acc')}).",
         "",
         "## Suggested paper additions",
         "",
@@ -343,7 +451,7 @@ def write_findings(rows):
         "",
         "## Manuscript check",
         "",
-        f"- The current paper table reports PGA Forget Quality as 0.0299, but the latest `results/PureGradientAscent/important.json` stores {fmt(pga['forget_quality'])}. This looks like a stale number and should be reconciled before submission.",
+        f"- The paper should now report aggregated numbers, not a single run. The current PGA Forget Quality aggregate is {fmt_with_std(pga, 'forget_quality')}.",
     ]
     findings_path.write_text("\n".join(lines) + "\n")
     return findings_path
@@ -351,13 +459,14 @@ def write_findings(rows):
 
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    rows = load_results()
-    write_csv(rows)
-    write_latex_tables(rows)
-    plot_tradeoff(rows)
-    plot_split_accuracy(rows)
-    plot_mia_thresholds(rows)
-    write_findings(rows)
+    run_rows, summary_rows = load_results()
+    write_csv(run_rows, "results_runs.csv")
+    write_csv(summary_rows, "results_summary.csv")
+    write_latex_tables(summary_rows)
+    plot_tradeoff(summary_rows)
+    plot_split_accuracy(summary_rows)
+    plot_mia_thresholds(summary_rows)
+    write_findings(summary_rows)
     print(f"Wrote analysis artifacts to {OUT_DIR}")
 
 

@@ -32,10 +32,16 @@ text { font-family: Arial, sans-serif; fill: #222; }
 <line x1="80" y1="60" x2="80" y2="450" class="axis" />
 <text x="380.0" y="500" text-anchor="middle" class="label">Forget Quality (higher is better)</text>
 <text x="20" y="260.0" text-anchor="middle" transform="rotate(-90 20 260.0)" class="label">Mean MIA score (lower is better)</text>
-<circle cx="696.5276264009561" cy="324.17985300347647" r="8" fill="#2e86ab" />
-<text x="706.5276264009561" y="314.17985300347647" class="label">GAFT</text>
-<circle cx="155.10241743424643" cy="398.71773323726234" r="8" fill="#2a9d8f" />
-<text x="165.10241743424643" y="388.71773323726234" class="label">IDK</text>
+<line x1="89.33879627880984" y1="100.54954289831613" x2="89.33879627880984" y2="100.54954289831613" stroke="#d1495b" stroke-width="2" />
+<line x1="89.33879627880984" y1="100.54954289831613" x2="89.33879627880984" y2="100.54954289831613" stroke="#d1495b" stroke-width="2" />
 <circle cx="89.33879627880984" cy="100.54954289831613" r="8" fill="#d1495b" />
-<text x="99.33879627880984" y="90.54954289831613" class="label">PGA</text>
+<text x="99.33879627880984" y="90.54954289831613" class="label">PGA (n=1)</text>
+<line x1="696.5276264009561" y1="324.17985300347647" x2="696.5276264009561" y2="324.17985300347647" stroke="#2e86ab" stroke-width="2" />
+<line x1="696.5276264009561" y1="324.17985300347647" x2="696.5276264009561" y2="324.17985300347647" stroke="#2e86ab" stroke-width="2" />
+<circle cx="696.5276264009561" cy="324.17985300347647" r="8" fill="#2e86ab" />
+<text x="706.5276264009561" y="314.17985300347647" class="label">GAFT (n=1)</text>
+<line x1="155.10241743424643" y1="398.71773323726234" x2="155.10241743424643" y2="398.71773323726234" stroke="#2a9d8f" stroke-width="2" />
+<line x1="155.10241743424643" y1="398.71773323726234" x2="155.10241743424643" y2="398.71773323726234" stroke="#2a9d8f" stroke-width="2" />
+<circle cx="155.10241743424643" cy="398.71773323726234" r="8" fill="#2a9d8f" />
+<text x="165.10241743424643" y="388.71773323726234" class="label">IDK (n=1)</text>
 </svg>
