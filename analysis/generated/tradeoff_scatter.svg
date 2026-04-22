@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="520" viewBox="0 0 760 520">
+<style>
+text { font-family: Arial, sans-serif; fill: #222; }
+.small { font-size: 12px; }
+.label { font-size: 13px; font-weight: bold; }
+.title { font-size: 18px; font-weight: bold; }
+.axis { stroke: #444; stroke-width: 1.2; }
+.grid { stroke: #ddd; stroke-width: 1; }
+</style>
+<text x="380.0" y="30" text-anchor="middle" class="title">Privacy-Unlearning Trade-off</text>
+<line x1="80" y1="450.0" x2="730" y2="450.0" class="grid" />
+<text x="70" y="454.0" text-anchor="end" class="small">0.346</text>
+<line x1="80" y1="352.5" x2="730" y2="352.5" class="grid" />
+<text x="70" y="356.5" text-anchor="end" class="small">0.419</text>
+<line x1="80" y1="254.99999999999994" x2="730" y2="254.99999999999994" class="grid" />
+<text x="70" y="258.99999999999994" text-anchor="end" class="small">0.492</text>
+<line x1="80" y1="157.5" x2="730" y2="157.5" class="grid" />
+<text x="70" y="161.5" text-anchor="end" class="small">0.565</text>
+<line x1="80" y1="60.0" x2="730" y2="60.0" class="grid" />
+<text x="70" y="64.0" text-anchor="end" class="small">0.638</text>
+<line x1="80.0" y1="60" x2="80.0" y2="450" class="grid" />
+<text x="80.0" y="470" text-anchor="middle" class="small">0.046</text>
+<line x1="242.5" y1="60" x2="242.5" y2="450" class="grid" />
+<text x="242.5" y="470" text-anchor="middle" class="small">0.187</text>
+<line x1="405.0" y1="60" x2="405.0" y2="450" class="grid" />
+<text x="405.0" y="470" text-anchor="middle" class="small">0.328</text>
+<line x1="567.5" y1="60" x2="567.5" y2="450" class="grid" />
+<text x="567.5" y="470" text-anchor="middle" class="small">0.469</text>
+<line x1="730.0" y1="60" x2="730.0" y2="450" class="grid" />
+<text x="730.0" y="470" text-anchor="middle" class="small">0.610</text>
+<line x1="80" y1="450" x2="730" y2="450" class="axis" />
+<line x1="80" y1="60" x2="80" y2="450" class="axis" />
+<text x="380.0" y="500" text-anchor="middle" class="label">Forget Quality (higher is better)</text>
+<text x="20" y="260.0" text-anchor="middle" transform="rotate(-90 20 260.0)" class="label">Mean MIA score (lower is better)</text>
+<circle cx="696.5276264009561" cy="324.17985300347647" r="8" fill="#2e86ab" />
+<text x="706.5276264009561" y="314.17985300347647" class="label">GAFT</text>
+<circle cx="155.10241743424643" cy="398.71773323726234" r="8" fill="#2a9d8f" />
+<text x="165.10241743424643" y="388.71773323726234" class="label">IDK</text>
+<circle cx="89.33879627880984" cy="100.54954289831613" r="8" fill="#d1495b" />
+<text x="99.33879627880984" y="90.54954289831613" class="label">PGA</text>
+</svg>

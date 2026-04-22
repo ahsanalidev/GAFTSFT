@@ -39,7 +39,7 @@ This paper investigates whether targeted unlearning remains dependable when depl
 
 While prior work has extensively studied unlearning in full-precision settings, relatively little attention has been given to its behavior under quantized deployment pipelines. This creates a gap between research assumptions and real-world usage. We frame unlearning as a reliability and privacy problem in deployed ML systems, where privacy leakage, robustness, system-level evaluation, and deployment constraints must be evaluated jointly rather than treated as secondary concerns.
 
-In this paper, we present an empirical study of targeted unlearning in a 4-bit quantized LLM using Unsloth and the TOFU benchmark. We compare three practical strategies: (i) Pure Gradient Ascent, (ii) retention-regularized Gradient Ascent (GAFT), and (iii) IDK-based supervised refusal tuning. We evaluate them using TOFU-based forgetting and retention metrics and complement this analysis with membership inference attack (MIA) signals to assess residual privacy leakage under deployment constraints.
+In this paper, we present an empirical study of targeted unlearning in a 4-bit quantized LLM using the Unsloth training framework [14] and the TOFU benchmark. We compare three practical strategies: (i) Pure Gradient Ascent, (ii) retention-regularized Gradient Ascent (GAFT), and (iii) IDK-based supervised refusal tuning. We evaluate them using TOFU-based forgetting and retention metrics and complement this analysis with membership inference attack (MIA) signals to assess residual privacy leakage under deployment constraints.
 
 Our experiments show that unlearning quality depends strongly on the optimization objective: pure gradient ascent is less stable, IDK tuning improves direct suppression, and GAFT provides a stronger overall balance between forgetting and retained utility in our setting. These findings highlight that practical unlearning in quantized LLMs should be assessed as a multi-objective reliability and security problem rather than a single-metric optimization.
 
@@ -105,7 +105,7 @@ Let $\mathcal{D}_f^{\mathrm{idk}}$ denote the transformed forget set. The object
 Rather than forcing the model to become incorrect, this method encourages controlled abstention on sensitive targets while retaining normal behavior elsewhere. Conceptually, it acts as response-level unlearning through supervised re-alignment.
 
 \subsection{Optimization and Implementation}
-All methods are implemented in the same training stack (Unsloth + TRL/HuggingFace), with method-specific loss definitions realized via custom trainer logic or transformed training targets. This keeps the optimization pipeline consistent and makes comparisons methodologically fair. The model is loaded and fine-tuned directly in 4-bit precision, and all evaluations are performed on the same quantized model.
+All methods are implemented in the same training stack (Unsloth [14] + TRL/HuggingFace), with method-specific loss definitions realized via custom trainer logic or transformed training targets. We use Unsloth for efficient 4-bit loading and LoRA-based fine-tuning in the memory-constrained training pipeline. This keeps the optimization pipeline consistent and makes comparisons methodologically fair. The model is loaded and fine-tuned directly in 4-bit precision, and all evaluations are performed on the same quantized model.
 
 \section{Experimental Setup}
 \subsection{Dataset and Splits}
@@ -133,7 +133,7 @@ A representative min-k\% feature is:
 \end{equation}
 
 \section{Results}
-Table~\ref{tab:main_results} summarizes the TOFU evaluation outputs from the three unlearning strategies: Pure Gradient Ascent (PGA), retention-regularized Gradient Ascent (GAFT), and IDK tuning.
+This section evaluates the three unlearning strategies through three DSML-relevant lenses: forgetting efficacy on targeted samples, retained functionality on non-target samples, and privacy leakage under attack-oriented evaluation. This framing is important for dependable and secure foundation-model deployment because a method that appears strong on one axis may still be undesirable if it degrades normal behavior or leaves residual privacy risk. Table~\ref{tab:main_results} summarizes forget-set and aggregate privacy metrics, Table~\ref{tab:cross_split_results} expands the view to retained-utility and out-of-domain behavior on the \texttt{retain}, \texttt{real\_author}, and \texttt{world\_fact} splits, and Fig.~\ref{fig:tradeoff_scatter} visualizes the main privacy-utility trade-off.
 
 \begin{table}[htbp]
 \caption{TOFU Results Across Unlearning Strategies}
@@ -144,7 +144,7 @@ Table~\ref{tab:main_results} summarizes the TOFU evaluation outputs from the thr
 \hline
 Method & Truth Ratio & Truth Prob & ROUGE-L & Acc & Forget Quality & MIA (Mean) \\
 \hline
-PGA  & 0.7440 & 0.3101 & 0.4264 & 0.5950 & 0.0299 & 0.6251 \\
+PGA  & 0.7439 & 0.3085 & 0.4204 & 0.5900 & 0.0541 & 0.6072 \\
 GAFT & 0.8269 & 0.2391 & 0.4257 & 0.5950 & 0.5812 & 0.4398 \\
 IDK  & 0.8863 & 0.1826 & 0.3818 & 0.5175 & 0.1111 & 0.3840 \\
 \hline
@@ -152,38 +152,59 @@ IDK  & 0.8863 & 0.1826 & 0.3818 & 0.5175 & 0.1111 & 0.3840 \\
 }
 \end{table}
 
-At the forget-set level, IDK tuning shows the strongest suppression-oriented profile in this run, with the lowest truth probability (0.1826), lowest ROUGE-L (0.3818), and lowest answer accuracy (0.5175). In deployment terms, IDK achieves stronger direct suppression of memorized knowledge, but may impact retained utility. GAFT and PGA retain higher answer overlap and accuracy on forget prompts (both 0.5950 accuracy), indicating weaker direct suppression than IDK under the same evaluation setup.
-
-For the aggregate ``Forget Quality'' score reported by the evaluation pipeline, GAFT obtains the highest value (0.5812), followed by IDK (0.1111) and PGA (0.0299). Under deployment constraints, this indicates that GAFT provides the most reliable privacy-utility trade-off among the three methods in this setting, while PGA remains the weakest baseline under this metric.
-
-Privacy leakage trends from membership inference are consistent with the above trade-off. Averaging Min-$k$\% MIA across the six reported thresholds gives 0.6251 (PGA), 0.4398 (GAFT), and 0.3840 (IDK). Relative to PGA, both GAFT and IDK reduce the MIA score substantially, with IDK achieving the lowest overall MIA score in this experiment. PGA exhibits unstable behavior, indicating weaker reliability for deployment scenarios.
-
-These results highlight that unlearning methods behave differently under deployment constraints, and selecting an appropriate method depends on the desired balance between privacy and utility. From a DSML perspective, the results also reinforce the importance of metrics and benchmarks for dependable ML, privacy/accountability evaluation, and robustness analysis for deployed foundation-model pipelines.
-
 \begin{table}[htbp]
-\caption{Deployment-Oriented Summary}
-\label{tab:deployment_summary}
+\caption{Cross-Split Utility and Privacy Trade-offs}
+\label{tab:cross_split_results}
 \centering
-\begin{tabular}{ll}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcccccc}
 \hline
-Scenario & Best Method \\
+Method & FQ $\uparrow$ & MIA $\downarrow$ & Forget Acc $\downarrow$ & Retain Acc $\uparrow$ & Real-Author Acc $\uparrow$ & World-Fact Acc $\uparrow$ \\
 \hline
-Balanced performance & GAFT \\
-Strong suppression & IDK \\
-Simplicity & PGA \\
+PGA  & 0.0541 & 0.6072 & 0.5900 & 0.5675 & 0.9100 & 0.8718 \\
+GAFT & 0.5812 & 0.4398 & 0.5950 & 0.5625 & 0.9300 & 0.8803 \\
+IDK  & 0.1111 & 0.3840 & 0.5175 & 0.5425 & 0.9200 & 0.8547 \\
 \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
+
+\paragraph{Forgetting efficacy.}
+At the forget-set level, IDK exhibits the strongest suppression-oriented behavior in this evaluated TOFU configuration. It achieves the lowest truth probability (0.1826), lowest ROUGE-L (0.3818), and lowest answer accuracy (0.5175), indicating that it most strongly reduces direct overlap with the target memorized answers. Under a strict deletion-oriented interpretation, this makes IDK the most aggressive of the three approaches. However, PGA and GAFT retain noticeably higher overlap with forget answers, which suggests that direct suppression alone does not identify the most deployment-suitable method in this setup.
+
+\paragraph{Retained functionality.}
+Cross-split evaluation changes the ranking. GAFT is strongest under the aggregate Forget Quality score, reaching 0.5812 compared with 0.1111 for IDK and 0.0541 for PGA, and it also preserves the strongest non-forget behavior overall. In particular, GAFT attains the highest accuracy on both the \texttt{real\_author} split (0.9300) and the \texttt{world\_fact} split (0.8803), while remaining competitive on \texttt{retain}. This makes GAFT the most balanced method in our quantized pipeline: it does not suppress forget answers as aggressively as IDK, but it provides the strongest combined profile across targeted forgetting, retained knowledge, and general factual competence. By contrast, IDK's stronger suppression comes with the weakest retain accuracy (0.5425) and weakest world-fact accuracy (0.8547), indicating a sharper utility cost.
+
+\paragraph{Privacy leakage and attack sensitivity.}
+Membership inference further sharpens the distinction between balanced and suppression-oriented behavior. Averaging Min-$k$\% MIA across the six thresholds gives 0.6072 for PGA, 0.4398 for GAFT, and 0.3840 for IDK. Thus, both GAFT and IDK substantially reduce membership leakage relative to PGA, while IDK provides the lowest attack score overall in this setup. Fig.~\ref{fig:tradeoff_scatter} shows the central trade-off clearly: GAFT and IDK both dominate PGA, but along different axes, with GAFT strongest on Forget Quality and IDK strongest on MIA. Fig.~\ref{fig:mia_thresholds} shows that IDK remains below the other methods across all six Min-$k$\% thresholds, which suggests that its privacy advantage is not tied to a single attack parameter choice.
+
+Taken together, the results support a three-way interpretation rather than a single universal winner. PGA is the weakest baseline in our quantized setting because it combines the highest leakage with the lowest Forget Quality, suggesting that unconstrained ascent is too unstable for dependable deployment. IDK is best understood as a privacy- and suppression-oriented strategy: it is strongest for reducing direct recall and MIA scores, but it sacrifices more retained utility. GAFT is the most deployment-balanced method in this study, because it substantially improves Forget Quality and reduces leakage while preserving stronger overall non-target behavior than IDK. For DSML, the key takeaway is that targeted unlearning should be evaluated as a multi-objective dependability problem, not as a single benchmark score.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{analysis/generated/tradeoff_scatter.png}
+\caption{Privacy-unlearning trade-off. GAFT achieves the best Forget Quality, while IDK achieves the lowest mean MIA score. Both methods dominate PGA, but along different axes.}
+\label{fig:tradeoff_scatter}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{analysis/generated/mia_thresholds.png}
+\caption{MIA sensitivity across Min-$k$\% thresholds. IDK remains consistently below GAFT and PGA across all six thresholds, indicating a stable privacy advantage under this attack family.}
+\label{fig:mia_thresholds}
+\end{figure}
 
 \section{Discussion and Limitations}
 \subsection{Discussion}
-The implementation details in our notebooks help explain the empirical behavior observed in the results section. In the PGA pipeline, unlearning is implemented with a direct sign-flip objective ($\mathcal{L}=-\mathcal{L}_{\mathrm{CE}}$) on forget10 only, which encourages aggressive forgetting but does not include an explicit utility-preservation term. In contrast, GAFT introduces a mixed objective with a retain term and a fixed mixed-batch sampler (for batch size 2, one forget and one retain sample per step), which likely contributes to the more stable privacy-utility behavior seen in the results. IDK tuning uses target replacement on forget examples (``[IDK\_our] I don't have that information.'') combined with an equal-sized retain sample, producing strong suppression-style forgetting and lower MIA scores in our current runs.
+The implementation details in our notebooks help explain why the three methods occupy different points in the dependability trade-off space. PGA applies a direct sign-flip objective ($\mathcal{L}=-\mathcal{L}_{\mathrm{CE}}$) on forget10 only. This gives it the simplest optimization objective, but it also leaves the method without an explicit mechanism for preserving non-target behavior. In our evaluated 4-bit pipeline, this corresponds to the weakest aggregate profile: PGA has the highest MIA score and the lowest Forget Quality. The practical implication is not that pure ascent is universally ineffective, but that it appears under-constrained for dependable deployment under the current low-resource setting.
 
-Across all three methods, the training backbone is intentionally controlled: the same 4-bit base model (\texttt{unsloth/llama-3-8b-bnb-4bit}), the same LoRA configuration ($r=16$, $\alpha=16$, same target modules, rank-stabilized LoRA enabled), and closely matched optimization settings (AdamW 8-bit, linear scheduler, gradient accumulation of 4, batch size 2, seed 3407). This consistency increases comparability across methods, while still allowing method-specific objective differences to drive outcome differences.
+GAFT adds exactly the constraint that PGA lacks: every update jointly incorporates a forgetting signal and a retain-preservation signal through the mixed objective and fixed mixed-batch sampler. In our experiments, this produces the most stable overall behavior across the three evaluation axes. GAFT is the only method that simultaneously attains high Forget Quality, substantially reduced MIA relative to PGA, and the strongest cross-split utility profile. This makes GAFT the clearest evidence in the paper that objective design matters more than aggressive forgetting alone when unlearning is evaluated from a deployment perspective.
 
-The findings suggest that unlearning effectiveness cannot be evaluated in isolation from deployment conditions. In particular, low-bit quantization introduces additional constraints that may affect both privacy and utility, requiring more robust evaluation protocols.
+IDK tuning reveals a different unlearning mode. Its lower forget accuracy, lower forget ROUGE-L, and lowest MIA scores indicate that target replacement is effective at suppressing direct recall and reducing attack exposure. However, the generated outputs also show that IDK does not always produce a clean abstention behavior. In several forget examples, the model responds with fabricated substitute biographies or drifts into unrelated continuations rather than consistently answering with a stable refusal. This qualitative failure mode is meaningful for DSML because it shows that low answer overlap is not equivalent to trustworthy deletion behavior. A model may stop reproducing the original fact while still generating confident hallucinated content about the same entity, which weakens the security interpretation of purely overlap-based metrics.
 
-From a dependable ML perspective, this indicates that unlearning methods should be assessed not only for forgetting performance but also for stability, robustness, and resistance to privacy leakage. More broadly, the findings connect to DSML concerns around secure deployment of foundation models, privacy/accountability in ML systems, and evaluation under constrained infrastructures.
+Across all three methods, the training backbone is intentionally controlled: the same 4-bit base model (\texttt{unsloth/llama-3-8b-bnb-4bit}), the same LoRA configuration ($r=16$, $\alpha=16$, same target modules, rank-stabilized LoRA enabled), and closely matched optimization settings (AdamW 8-bit, linear scheduler, gradient accumulation of 4, batch size 2, seed 3407). This controlled setup increases the credibility of the comparison because the observed differences are much more plausibly explained by the unlearning objectives than by confounding implementation changes.
+
+Taken together, the findings suggest that unlearning effectiveness cannot be evaluated in isolation from deployment conditions. In particular, low-bit quantization should be treated as part of the threat and reliability model rather than as a purely efficiency-oriented implementation detail. From a dependable ML perspective, targeted unlearning should therefore be assessed using at least three complementary lenses: direct suppression on forget examples, retained utility on non-target examples, and privacy leakage under attack-oriented post hoc evaluation such as MIA. More broadly, the findings connect to DSML concerns around dependable generative AI, privacy/accountability in ML systems, benchmark design, and robustness analysis for deployed foundation-model pipelines.
 
 \subsection{Limitations}
 Several limitations follow directly from the current code and experimental protocol:
@@ -217,6 +238,7 @@ This work demonstrates that targeted unlearning behavior varies significantly un
 \bibitem{b11} D. Kalajdzievski, ``Scaling laws for forgetting in LLMs,'' 2024. [Online]. Available: \url{https://arxiv.org/abs/2401.05605}
 \bibitem{b12} Z. Zhang \emph{et al.}, ``Catastrophic failure of LLM unlearning via quantization,'' in \emph{International Conference on Learning Representations (ICLR)}, 2024. [Online]. Available: \url{https://arxiv.org/abs/2402.03279}
 \bibitem{b13} P. Maini \emph{et al.}, ``TOFU: A task of fictitious unlearning,'' 2024. [Online]. Available: \url{https://arxiv.org/abs/2401.06121}
+\bibitem{b14} D. Han, M. Han, and Unsloth team, \emph{Unsloth}. 2023. [Online]. Available: \url{https://github.com/unslothai/unsloth}
 \end{thebibliography}
 
 \end{document}
