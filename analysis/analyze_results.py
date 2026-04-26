@@ -8,6 +8,7 @@ from statistics import mean, stdev
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS_DIR = ROOT / "results"
+RESULTS_WITH_SEED_DIR = ROOT / "results_with_seed"
 OUT_DIR = ROOT / "analysis" / "generated"
 
 METHOD_LABELS = {
@@ -19,6 +20,13 @@ METHOD_LABELS = {
 SPLITS = ["forget", "retain", "real_author", "world_fact"]
 METRICS = ["acc", "rougeL_score", "truth_prob", "truth_ratio"]
 MIA_THRESHOLDS = [10, 20, 30, 40, 50, 60]
+METHOD_ORDER = ["PureGradientAscent", "GradientAscentFTMethod", "IDKTuning"]
+T_CRITICAL_95 = {
+    2: 12.706,
+    3: 4.303,
+    4: 3.182,
+    5: 2.776,
+}
 
 
 def safe_stdev(values):
@@ -28,42 +36,24 @@ def safe_stdev(values):
 def ci95(values):
     if len(values) <= 1:
         return 0.0
-    return 1.96 * safe_stdev(values) / math.sqrt(len(values))
-
-
-def find_result_files(method_dir):
-    seed_paths = []
-    for seed_dir in sorted(path for path in method_dir.iterdir() if path.is_dir()):
-        if not seed_dir.name.startswith("seed_"):
-            continue
-        for filename in ("important.json", "tofu.json"):
-            candidate = seed_dir / filename
-            if candidate.exists():
-                seed_paths.append(candidate)
-                break
-
-    if seed_paths:
-        return seed_paths
-
-    for filename in ("important.json", "tofu.json"):
-        candidate = method_dir / filename
-        if candidate.exists():
-            return [candidate]
-    return []
+    t_value = T_CRITICAL_95.get(len(values), 1.96)
+    return t_value * safe_stdev(values) / math.sqrt(len(values))
 
 
 def extract_seed(path):
     if path.parent.name.startswith("seed_"):
         return path.parent.name.removeprefix("seed_")
+    if "_seed_" in path.parent.name:
+        return path.parent.name.rsplit("_seed_", 1)[1]
     return "single_run"
 
 
-def build_run_row(method_dir, result_path):
-    method = METHOD_LABELS.get(method_dir.name, method_dir.name)
+def build_run_row(method_dir_name, result_path):
+    method = METHOD_LABELS.get(method_dir_name, method_dir_name)
     data = json.loads(result_path.read_text())
     mia_values = list(data["MIA"].values())
     row = {
-        "method_dir": method_dir.name,
+        "method_dir": method_dir_name,
         "method": method,
         "seed": extract_seed(result_path),
         "result_path": str(result_path.relative_to(ROOT)),
@@ -99,10 +89,40 @@ def build_run_row(method_dir, result_path):
     return row
 
 
+def find_seed_result_files():
+    run_map = {method_dir: [] for method_dir in METHOD_ORDER}
+    if not RESULTS_WITH_SEED_DIR.exists():
+        return run_map
+
+    for method_dir in METHOD_ORDER:
+        pattern = f"{method_dir}_seed_*/important.json"
+        run_map[method_dir] = sorted(RESULTS_WITH_SEED_DIR.glob(pattern))
+    return run_map
+
+
+def find_single_run_result_files():
+    run_map = {method_dir: [] for method_dir in METHOD_ORDER}
+    if not RESULTS_DIR.exists():
+        return run_map
+
+    for method_dir in METHOD_ORDER:
+        base_dir = RESULTS_DIR / method_dir
+        for filename in ("important.json", "tofu.json"):
+            candidate = base_dir / filename
+            if candidate.exists():
+                run_map[method_dir] = [candidate]
+                break
+    return run_map
+
+
 def load_results():
     run_rows = []
-    for method_dir in sorted(path for path in RESULTS_DIR.iterdir() if path.is_dir()):
-        for result_path in find_result_files(method_dir):
+    run_map = find_seed_result_files()
+    if not any(run_map.values()):
+        run_map = find_single_run_result_files()
+
+    for method_dir in METHOD_ORDER:
+        for result_path in run_map.get(method_dir, []):
             run_rows.append(build_run_row(method_dir, result_path))
 
     summary_rows = []
@@ -168,7 +188,7 @@ def write_latex_tables(rows):
     ]
     for row in ordered:
         table_1.append(
-            f'{row["method"]} & {fmt(row["n_runs"])} & {fmt_with_std(row, "forget_quality")} & {fmt_with_std(row, "mia_mean")} & '
+            f'{row["method"]} & {int(row["n_runs"])} & {fmt_with_std(row, "forget_quality")} & {fmt_with_std(row, "mia_mean")} & '
             f'{fmt_with_std(row, "forget_acc")} & {fmt_with_std(row, "retain_acc")} & '
             f'{fmt_with_std(row, "real_author_acc")} & {fmt_with_std(row, "world_fact_acc")} \\\\'
         )

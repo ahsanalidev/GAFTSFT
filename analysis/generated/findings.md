@@ -2,11 +2,11 @@
 
 ## Strongest findings from the current JSON summaries
 
-- GAFT has the strongest Forget Quality (0.5812 $\pm$ 0.0000) across 1 runs.
-- IDK has the lowest mean MIA score (0.3840 $\pm$ 0.0000), improving over GAFT by 0.0558 and over PGA by 0.2232.
-- GAFT keeps the best overall utility average across non-forget splits (0.7909 $\pm$ 0.0000), with especially strong real-author accuracy (0.9300 $\pm$ 0.0000).
-- PGA has the worst privacy profile: highest mean MIA (0.6072 $\pm$ 0.0000) and weakest Forget Quality (0.0541 $\pm$ 0.0000).
-- IDK is still the most suppression-oriented method, lowering forget accuracy to 0.5175 $\pm$ 0.0000 while also showing the lowest retain accuracy (0.5425 $\pm$ 0.0000).
+- GAFT has the strongest Forget Quality (0.5427 $\pm$ 0.0334) across 3 runs.
+- IDK has the lowest mean MIA score (0.4171 $\pm$ 0.0070), improving over GAFT by 0.0247 and over PGA by 0.2048.
+- GAFT keeps the best overall utility average across non-forget splits (0.7912 $\pm$ 0.0107), with especially strong real-author accuracy (0.9400 $\pm$ 0.0100).
+- PGA has the worst privacy profile: highest mean MIA (0.6219 $\pm$ 0.0130) and weakest Forget Quality (0.0392 $\pm$ 0.0046).
+- IDK is still the most suppression-oriented method, lowering forget accuracy to 0.5617 $\pm$ 0.0063 while also showing the lowest retain accuracy (0.5450 $\pm$ 0.0050).
 
 ## Suggested paper additions
 
@@ -17,4 +17,4 @@
 
 ## Manuscript check
 
-- The paper should now report aggregated numbers, not a single run. The current PGA Forget Quality aggregate is 0.0541 $\pm$ 0.0000.
+- The paper should now report aggregated numbers, not a single run. The current PGA Forget Quality aggregate is 0.0392 $\pm$ 0.0046.
