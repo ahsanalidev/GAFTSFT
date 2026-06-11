@@ -8,7 +8,7 @@ from statistics import mean, stdev
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS_DIR = ROOT / "results"
-RESULTS_WITH_SEED_DIR = ROOT / "LLaMa-3.2-8B" / "results_with_seed"
+RESULTS_WITH_SEED_DIR = ROOT / "results"
 OUT_DIR = ROOT / "analysis" / "generated"
 
 METHOD_LABELS = {

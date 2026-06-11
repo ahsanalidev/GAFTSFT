@@ -1,0 +1,1134 @@
+\documentclass[a4paper,12pt]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{a4wide}
+\usepackage{tikz}
+\usetikzlibrary{angles,quotes}
+\renewcommand{\baselinestretch}{1.5}
+\usepackage{ragged2e}
+\usepackage{acronym}
+\usepackage{graphicx}
+\usepackage{rotating}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage[pdftex]{graphicx}
+\usepackage{epstopdf}
+\graphicspath{{images/}}
+\usepackage{subfig}
+\usepackage{wrapfig}
+\usepackage{adjustbox}
+\usepackage{tabu}
+\usepackage{pgfplots}
+\pgfplotsset{compat=newest}
+\pgfplotsset{plot coordinates/math parser=false}
+\newlength\figureheight
+\newlength\figurewidth
+\pgfkeys{/pgf/number format/.cd,
+set decimal separator={,\!},
+1000 sep={\,},
+}
+\usepackage{subcaption}
+\usepackage{framed}
+\usepackage{ifthen}
+\usepackage{url}
+\usepackage{ifpdf}
+\usepackage{mathtools}
+\usetikzlibrary{arrows.meta}
+\usepackage{IEEEtrantools}
+\usepackage[hidelinks]{hyperref}
+\usepackage{color}
+\hypersetup{
+colorlinks=true,
+linkcolor=black,
+citecolor=black,
+urlcolor=blue}
+\usepackage{pdflscape}
+\usepackage{titletoc}
+\usepackage{appendix}
+\usepackage{mathpazo}
+\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{pdfpages}
+\usepackage{dirtytalk}
+\usepackage{upquote}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{multirow}
+
+\usepackage[backend=bibtex,style=numeric-comp,sorting=none,natbib=true]{biblatex}
+\addbibresource{thesis_refs.bib}
+\parindent 0pt
+\setlength{\parskip}{0.6em}
+
+\begin{document}
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+\begin{titlepage}
+	\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+	\center
+
+	{\huge\bfseries Auditing Privacy in Machine Unlearning using Poisoning}\\[0.6cm]
+	\large by\\[0.2cm]
+	\LARGE\textit{\textbf{Syed Ahsan Ali}}\\[0.2cm]
+	% TODO: replace with your official roll/registration number
+	\large Roll No. \rule{3cm}{0.4pt}\\[0.2cm]
+	\Large Supervised by Dr. Muhammad Umer Farooq\\[0.2cm]
+	\Large MS (Data Science)\\
+	\Large CS-5002 Thesis\\[0.5cm]
+	\includegraphics[width=0.30\textwidth]{logo.jpg}
+	\hspace{0.5cm}
+	\includegraphics[width=0.325\textwidth]{logo2.jpeg}\\[0.2cm]
+	\Large {NED University of Engineering and Technology, Karachi}\\
+	\large {Department of Computer Science and Information Technology}\\[0.2cm]
+	\large Spring 2026\\[0.5cm]
+	\begin{center}
+		\footnotesize {The candidate confirms that the work submitted is his own, except where work which has formed part of jointly-authored publications has been included. The contribution of the candidate and the other authors to this work has been explicitly indicated below. The candidate confirms that appropriate credit has been given within the thesis where reference has been made to the work of others. This copy has been supplied on the understanding that it is copyright material and that no quotation from the thesis may be published without proper acknowledgment.}
+	\end{center}
+\end{titlepage}
+
+%----------------------------------------------------------------------------------------
+\clearpage
+\thispagestyle{empty}
+\section*{Certificate of Approval}
+This is to certify that the research work presented in this thesis, entitled ``\textbf{Auditing Privacy in Machine Unlearning using Poisoning}'', was conducted by \textbf{Syed Ahsan Ali} under the supervision of \textbf{Dr. Muhammad Umer Farooq}.
+
+This thesis is submitted to NED University of Engineering and Technology in partial fulfillment of the requirements for the degree of MS (Computer Science \& Information Technology).
+\\[1.5cm]
+
+Signature:\rule{5cm}{0.4pt}\\
+Student (Syed Ahsan Ali)
+\\[1.5cm]
+
+Signature:\rule{5cm}{0.4pt}\\
+Supervisor (Dr. Muhammad Umer Farooq)
+\\[1.5cm]
+
+Signature:\rule{5cm}{0.4pt}\\
+Chairman, Department of Computer Science \& Information Technology
+
+\clearpage
+\thispagestyle{empty}
+\section*{Declaration}
+I, Syed Ahsan Ali, declare that the thesis entitled `\textit{\textbf{Auditing Privacy in Machine Unlearning using Poisoning}}', submitted to the Department of Computer Science and Information Technology (NED University of Engineering and Technology, Karachi) in partial fulfillment of the requirements for the degree of Master of Science in Computer Science and Information Technology, is an original report of my own research. It has been written entirely by me and has not been submitted, in whole or in part, for any other degree or professional qualification. Where the work draws on a jointly-authored research paper produced from the same study, this has been clearly indicated. Due references have been provided for all supporting literature and resources.
+
+\clearpage
+\thispagestyle{empty}
+\section*{Acknowledgment}
+I am grateful to my supervisor, Dr. Muhammad Umer Farooq, whose guidance and patience shaped this work from a vague idea into a finished study. His habit of asking the uncomfortable question at the right moment kept the experiments honest. I also thank the faculty and staff of the Department of Computer Science and Information Technology at NED University for providing an environment in which independent research is encouraged.
+
+A separate word of thanks goes to the maintainers of the open-source tools this study leaned on so heavily, especially the teams behind Unsloth, the Hugging Face ecosystem, and the authors of the TOFU benchmark, without whose public artefacts a study of this scale would not have been possible on a single free-tier GPU. Finally, I owe more than I can express here to my family, whose steady encouragement carried me through the long stretches when the results refused to cooperate.
+
+\clearpage
+\thispagestyle{empty}
+\begin{abstract}
+Most studies of machine unlearning in large language models are carried out under generous computational conditions: full-precision weights, large accelerators, and few restrictions on memory. Real deployments rarely look like this. To fit large models onto modest hardware, practitioners routinely combine low-bit quantization with parameter-efficient fine-tuning, and it is far from obvious that an unlearning procedure that behaves well in the laboratory will continue to behave well once the model has been compressed to four bits. This thesis asks whether targeted unlearning remains dependable, in the joint sense of forgetting effectively, preserving useful behavior, and resisting privacy attacks, when it is applied inside a 4-bit quantized, LoRA-based pipeline built on LLaMA-3-8B.
+
+Three practical strategies are studied side by side: Pure Gradient Ascent (PGA), a retain-regularized variant that mixes forgetting and retention signals in every batch (GAFT), and a supervised refusal scheme that re-targets the forget set onto an ``I don't know'' response (IDK). Each method is evaluated on the TOFU benchmark and through a membership inference analysis based on Min-$k$\% likelihood features, and every configuration is repeated across three random seeds so that the conclusions rest on aggregated rather than single-run evidence.
+
+The results show that the choice of objective changes the privacy-utility trade-off substantially. GAFT delivers the most balanced profile, with the strongest forget quality and the best preserved utility, while IDK produces the lowest membership inference scores and the most aggressive suppression of memorized answers. A close audit of 1{,}200 IDK generations, however, reveals that this apparent success is largely an illusion: the method almost never abstains cleanly and instead replaces forgotten facts with confidently fabricated substitutes. PGA proves the least reliable of the three. Taken together, the findings argue that unlearning must be evaluated as a deployment-level property, with quantization treated as part of the threat model rather than an implementation detail, and that low answer overlap should never be mistaken for genuine knowledge removal.
+\end{abstract}
+
+\clearpage
+\thispagestyle{empty}
+{\pagestyle{plain}
+\tableofcontents
+\cleardoublepage}
+{\pagestyle{plain}
+\listoffigures
+\listoftables
+\listofalgorithms
+\cleardoublepage}
+
+%----------------------------------------------------------------------------------------
+%	LIST OF ABBREVIATIONS
+%----------------------------------------------------------------------------------------
+\clearpage
+\thispagestyle{plain}
+\section*{List of Abbreviations}
+\begin{acronym}[ROUGE-L]
+\acro{LLM}{Large Language Model}
+\acro{PEFT}{Parameter-Efficient Fine-Tuning}
+\acro{LoRA}{Low-Rank Adaptation}
+\acro{PGA}{Pure Gradient Ascent}
+\acro{GAFT}{Gradient Ascent with a Fine-Tuning (retain) constraint}
+\acro{IDK}{``I Don't Know'' refusal tuning}
+\acro{TOFU}{Task of Fictitious Unlearning}
+\acro{MIA}{Membership Inference Attack}
+\acro{FQ}{Forget Quality}
+\acro{KS}{Kolmogorov--Smirnov (test)}
+\acro{SVC}{Support Vector Classifier}
+\acro{ROUGE}{Recall-Oriented Understudy for Gisting Evaluation}
+\acro{GDPR}{General Data Protection Regulation}
+\acro{CE}{Cross-Entropy}
+\acro{GPU}{Graphics Processing Unit}
+\acro{NLL}{Negative Log-Likelihood}
+\end{acronym}
+\cleardoublepage
+
+%========================================================================================
+%	CHAPTER 1 - INTRODUCTION
+%========================================================================================
+\chapter{Introduction}
+\label{chap:introduction}
+
+\section{Background and Motivation}
+A modern language model is, in a very literal sense, a compressed copy of the text it was trained on. During pre-training and fine-tuning the network adjusts billions of parameters so that it can predict the next token in sequences drawn from enormous corpora, and a side effect of doing this well is that the model ends up storing a great deal of what it has seen. Some of that stored content is exactly what we want: grammar, world knowledge, reasoning patterns. Some of it is not. Names, addresses, medical details, private correspondence, copyrighted passages, and other sensitive material can all end up encoded in the weights, and the model will happily reproduce or paraphrase them when prompted in the right way \parencite{carlini2021extracting}. The problem is no longer hypothetical. Memorization in large models has been measured directly, and the larger and more capable the model, the more of its training data it tends to retain.
+
+This creates an awkward tension. On one side sits the practical and commercial pressure to train on as much data as possible. On the other sits a growing body of law and policy that gives individuals the right to have their personal data removed. The European Union's General Data Protection Regulation codifies a ``right to erasure'' \parencite{gdpr2016}, and comparable provisions are appearing in other jurisdictions. A data subject who asks an organization to delete their records reasonably expects that the deletion is real, not merely cosmetic. When the data in question has already been baked into a trained model, honoring that request is genuinely hard. Deleting a row from a database is trivial; deleting the influence of that row from a network whose knowledge is smeared across millions of parameters is not.
+
+The obvious remedy, retraining the model from scratch on a corpus with the offending data removed, is almost never viable. Training a model in the LLaMA-3 class costs a small fortune in compute and takes weeks on large clusters. Doing this every time a deletion request arrives would be absurd. \emph{Machine unlearning} is the field that has grown up around this gap. Its goal is to remove, or at least convincingly suppress, the influence of a designated subset of the training data, the \emph{forget set}, while leaving the rest of the model's behavior intact, and to do so at a cost far below full retraining \parencite{cao2015unlearning, bourtoule2021machine}. For language models specifically, a now-standard recipe is to keep fine-tuning the model with an objective that pushes it away from the forget data, for example by reversing the sign of the usual training loss so that the model is rewarded for getting forget-set answers wrong rather than right \parencite{yao2023unlearning}.
+
+What complicates the picture is that ``removing the influence'' of a fact is much fuzzier for a language model than for a classical classifier. In a tabular setting one can sometimes point to specific examples and reason cleanly about their effect. In an autoregressive model the same piece of knowledge can resurface through a paraphrase, a translation, or an indirect question even after the verbatim answer has been suppressed. A model can also stop producing the correct answer while still leaking, through the statistics of its token probabilities, that it once saw the data. Genuine forgetting and surface-level silence are not the same thing, and a large part of this thesis is concerned with telling them apart.
+
+\section{From the Laboratory to the Deployment Pipeline}
+There is a second, less discussed gap that motivates this work. Almost all of the unlearning literature evaluates its methods on full-precision models running on high-end research hardware. Deployment looks nothing like that. To serve or fine-tune large models on commodity or free-tier GPUs, practitioners lean heavily on two techniques. The first is \emph{quantization}, which stores the weights at low numerical precision, commonly four bits, so that a model that would otherwise demand tens of gigabytes of memory can fit on a single modest card \parencite{dettmers2022int8, dettmers2023qlora}. The second is \emph{parameter-efficient fine-tuning}, of which Low-Rank Adaptation (LoRA) is the most widely used member: instead of updating all of the model's weights, one freezes the original network and trains a small set of low-rank adapter matrices \parencite{hu2022lora}. Combining 4-bit quantization with LoRA, often called QLoRA, has become the default way to adapt large models without a data center behind you.
+
+The uncomfortable question is whether unlearning behaves the same way inside this compressed pipeline as it does in full precision. There is good reason to suspect that it does not. Quantization perturbs every weight, and an unlearning update that nudges the model just far enough to suppress a fact in full precision may land differently once those weights are rounded to four bits. More strikingly, recent work has shown that quantization can act as a partial \emph{undo} button: a model that has apparently forgotten something at full precision can recover the suppressed knowledge after it is quantized, because the unlearning edit is small enough to be washed out by the rounding \parencite{zhang2024quantization}. If a deployment step that practitioners think of as a mere efficiency optimization can quietly resurrect deleted data, then evaluating unlearning only in full precision is not just incomplete, it is potentially misleading. Quantization belongs inside the threat model.
+
+This thesis therefore takes the position that unlearning should be studied where it is actually used. Rather than unlearn in full precision and quantize afterwards, every method here is applied to a model that is already loaded and fine-tuned in 4-bit precision, and every evaluation is run on that same quantized model. The aim is to measure the reliability that a practitioner on a constrained budget would actually obtain, not the reliability that a well-resourced laboratory might report.
+
+\section{Problem Statement}
+The core problem this thesis addresses can be stated plainly. Targeted unlearning methods for large language models are typically proposed, tuned, and validated under idealized conditions, yet the systems that need them most are run under tight memory budgets using 4-bit quantization and low-rank adapters. It is not established whether the leading families of unlearning objectives remain dependable under these conditions, where ``dependable'' has to mean three things at once: the model must genuinely reduce its reliance on the forget set, it must keep performing well on everything it was not asked to forget, and it must not continue to leak, through privacy attacks, that the forgotten data was ever present. Worse, the standard behavioral metrics used to declare success, such as a drop in answer accuracy or text overlap on the forget set, can be satisfied by a model that has not forgotten anything at all but has merely learned to paper over the gap with fabricated answers. There is consequently a need for a controlled, multi-seed, multi-metric study that compares representative unlearning strategies inside a realistic quantized pipeline and that looks past aggregate scores to ask what the model is actually doing when it appears to forget.
+
+\section{Research Questions}
+The investigation is organized around four questions.
+
+\begin{enumerate}
+	\item \textbf{RQ1.} Under a 4-bit quantized, LoRA-based pipeline, do different unlearning objectives produce materially different trade-offs between forgetting, retained utility, and privacy leakage, or do they converge to broadly similar behavior?
+	\item \textbf{RQ2.} When a method drives down forget-set accuracy and answer overlap, does this reflect genuine abstention and knowledge removal, or is the apparent suppression achieved by substituting fabricated content for the forgotten facts?
+	\item \textbf{RQ3.} When forgetting, utility, and membership inference leakage are weighed together, which of the studied methods offers the most dependable profile for deployment under these constraints?
+	\item \textbf{RQ4.} How stable are these outcomes across random seeds, and are the observed differences between methods large enough to survive run-to-run variation?
+\end{enumerate}
+
+\section{Aim and Objectives}
+The overarching aim of the thesis is to assess, empirically and under deployment-realistic constraints, how reliable targeted unlearning is in 4-bit quantized large language models. This aim is pursued through the following concrete objectives:
+
+\begin{itemize}
+	\item to build a single, consistent training and evaluation pipeline in which a LLaMA-3-8B model is memorized on a known dataset and then unlearned, entirely in 4-bit precision with LoRA adapters;
+	\item to implement three representative unlearning strategies, Pure Gradient Ascent, retain-regularized Gradient Ascent (GAFT), and IDK refusal tuning, within that common pipeline so that any difference in outcome can be attributed to the objective rather than to incidental engineering choices;
+	\item to evaluate each method along three independent axes, namely forgetting efficacy, utility preservation across multiple data splits, and privacy leakage measured with a Min-$k$\% membership inference attack;
+	\item to repeat every configuration across three random seeds and report aggregated statistics so that the conclusions are robust to training stochasticity;
+	\item to audit the actual generations produced by the most aggressively suppressing method, in order to determine whether low overlap corresponds to clean refusal or to hallucinated substitution; and
+	\item to translate the findings into practical guidance on which method is most trustworthy for memory-constrained deployment, and on how unlearning ought to be evaluated more generally.
+\end{itemize}
+
+\section{Contributions}
+The principal contributions of this thesis are as follows.
+
+\begin{enumerate}
+	\item It provides, to the best of my knowledge, one of the first controlled comparisons of multiple targeted-unlearning objectives carried out entirely inside a 4-bit quantized, LoRA-based pipeline, rather than in full precision.
+	\item It evaluates each method jointly along behavioral and privacy dimensions, combining the TOFU forgetting and utility metrics with a Min-$k$\% membership inference attack, and reports all results as aggregates over three random seeds.
+	\item It adopts and argues for an explicitly \emph{operational} definition of forgetting, framed as reduced reliance on the forget set plus preserved utility plus minimized privacy leakage, in place of the unverifiable notion of complete semantic erasure.
+	\item It contributes a behavioral audit of 1{,}200 forget-set generations from the IDK method, classifying each output into categories such as clean abstention, hallucinated substitute, and memorized leakage, and shows that the method's strong aggregate scores are produced overwhelmingly by fabrication rather than refusal.
+	\item It distills the comparison into deployment-oriented guidance, identifying the retain-regularized objective as the most balanced choice under quantization while cautioning against treating low answer overlap as evidence of true deletion.
+	\item It releases the full experimental code to support reproduction and extension \parencite{ali2026code}.
+\end{enumerate}
+
+\section{Scope and Delimitations}
+It is worth being upfront about what this study does and does not cover, since the conclusions should be read in light of these boundaries. The work uses a single model family and size, LLaMA-3-8B, and a single quantization scheme, 4-bit, loaded through the bitsandbytes backend. The forgetting task is fixed to one configuration of the TOFU benchmark, namely the forget10 split paired with retain90. Privacy is assessed with one attack family, a Min-$k$\% likelihood classifier, rather than an exhaustive battery of attacks. Hyperparameters such as the retain weight in GAFT and the number of unlearning steps are held at sensible, lightly-tuned values rather than being optimized exhaustively for each method. These choices were made deliberately, to keep the comparison fair and the compute tractable on a single free-tier GPU, but they do limit how far the numerical results should be generalized. What the study is designed to support is a careful relative comparison of methods under a common, realistic setting, together with qualitative insight into how each method behaves; it is not designed to certify any single method as universally optimal.
+
+\section{Organization of the Thesis}
+The remainder of the thesis is structured as follows. Chapter~\ref{chap:background} lays the theoretical groundwork, explaining how language models store knowledge, what machine unlearning means in this context, and how quantization, LoRA, membership inference, and the TOFU benchmark fit together. Chapter~\ref{chap:literature} surveys the relevant literature, tracing unlearning from its classical roots through to the most recent LLM-specific methods, and pinpoints the gap that this study sets out to fill. Chapter~\ref{chap:methodology} formalizes the problem and describes the three unlearning strategies, the two-stage training protocol, and the evaluation framework in detail. Chapter~\ref{chap:setup} documents the experimental setup, including the hardware and software stack, the dataset splits, the model and adapter configuration, the hyperparameters, the seeding strategy, and the membership inference and behavioral-audit pipelines. Chapter~\ref{chap:results} presents and analyzes the results across forgetting, utility, and privacy, and reports the audit of the IDK generations. Chapter~\ref{chap:discussion} interprets these findings, answers the research questions, and sets out the limitations and threats to validity. Chapter~\ref{chap:conclusion} concludes and outlines directions for future work.
+
+%========================================================================================
+%	CHAPTER 2 - BACKGROUND  (scaffold - to be written next)
+%========================================================================================
+\chapter{Background and Theoretical Foundations}
+\label{chap:background}
+
+This chapter assembles the conceptual machinery the rest of the thesis relies on. The study sits at the intersection of several topics that are usually treated separately: how language models learn and memorize, what it means to make one forget, how models are made small enough to deploy, and how an adversary might still extract what was supposedly removed. Each of these has its own literature and its own vocabulary. The purpose here is to set them down in one place, at a level of detail that makes the methodology in Chapter~\ref{chap:methodology} read naturally, and to fix the notation used throughout. A reader already fluent in transformer training and low-rank adaptation can skim the first few sections; the later material on quantization and membership inference is more specific to the questions this thesis asks.
+
+\section{Language Models and Autoregressive Modeling}
+A language model is, at heart, a probability distribution over sequences of tokens. Given a finite vocabulary $\mathcal{V}$ and a sequence $x = (x_1, x_2, \dots, x_T)$ with each $x_t \in \mathcal{V}$, the model assigns the sequence a probability. Almost all modern models are \emph{autoregressive}, meaning they factor that joint probability into a product of conditional next-token distributions using the chain rule of probability:
+\begin{equation}
+	p_\theta(x) = \prod_{t=1}^{T} p_\theta\!\left(x_t \mid x_1, \dots, x_{t-1}\right),
+	\label{eq:autoregressive}
+\end{equation}
+where $\theta$ denotes the parameters of the network. Reading Equation~\eqref{eq:autoregressive} from left to right, the model predicts each token from everything that came before it. This single idea, predicting the next token, is enough to learn grammar, facts, and a surprising amount of reasoning, provided the network is large and the data plentiful.
+
+The network that produces these conditionals is, in the models studied here, a transformer \parencite{vaswani2017attention}. Its defining component is self-attention, a mechanism that lets every position in the sequence look at, and selectively combine, information from every other position. Stacked attention layers interleaved with position-wise feed-forward blocks give the model its capacity. LLaMA-3-8B, the base model used throughout this work, is one such transformer with roughly eight billion parameters \parencite{dubey2024llama3}. The exact architectural details are not central to the argument; what matters is that the model is a single large parameter vector $\theta$ whose values jointly encode everything the model has learned.
+
+Training proceeds by maximum likelihood. Given a dataset $\mathcal{D}$ of sequences, one searches for parameters that make the observed data as probable as possible, which is equivalent to minimizing the average negative log-likelihood. For a supervised question--answer formulation, where each example is a prompt $x$ paired with a target answer $y$, this is the familiar cross-entropy objective:
+\begin{equation}
+	\mathcal{L}_{\mathrm{CE}}(\theta; \mathcal{D}) = -\frac{1}{|\mathcal{D}|} \sum_{(x,y)\in\mathcal{D}} \log p_\theta\!\left(y \mid x\right).
+	\label{eq:ce}
+\end{equation}
+Minimizing Equation~\eqref{eq:ce} pushes the model to assign high probability to the correct continuation. Gradient descent does the work: parameters move a small step against the gradient of the loss at each iteration, $\theta_{t+1} = \theta_t - \eta\,\nabla_\theta \mathcal{L}_{\mathrm{CE}}$, with $\eta$ the learning rate. It is worth holding on to the sign in that update, because the unlearning methods in this thesis are obtained, in part, by flipping it.
+
+Two training regimes need to be distinguished. \emph{Pre-training} runs Equation~\eqref{eq:ce} over an enormous, general corpus and is what produces a base model's broad competence. \emph{Fine-tuning} continues training on a smaller, task-specific dataset to specialize the model. The experiments here use fine-tuning twice over: once to deliberately teach the model a set of facts it should know, and then again to make it forget a designated subset of them. That deliberate two-stage design, described in Chapter~\ref{chap:methodology}, is what gives a clean handle on what the model has learned and what we then try to remove.
+
+\section{How Knowledge and Memorization Live in the Weights}
+If forgetting were as simple as locating a fact and erasing it, this thesis would be very short. The difficulty is that knowledge in a neural network is not stored in any one place. A single fact is represented by the cooperation of many parameters spread across many layers, and a single parameter participates in countless facts. Representations are \emph{distributed}, and this is precisely what makes them efficient and generalizable. It is also what makes targeted deletion hard: there is no row to drop, no cell to null out.
+
+Compounding this, large models do not merely generalize from their training data; they also \emph{memorize} pieces of it verbatim. Carlini and colleagues showed that one can prompt a large model in the right way and have it emit chunks of its training set word for word, including personal information that appeared only rarely in the corpus \parencite{carlini2021extracting}. The tendency to memorize grows with model scale, so the very models that are most useful are also the ones most likely to have absorbed sensitive content. Memorization is not a bug that careful engineering removes; it is a measurable property of how these networks fit their data.
+
+This has two consequences that shape everything downstream. The first is definitional. Because a fact can resurface through a paraphrase, a translation, or an obliquely worded question, ``forgetting'' cannot be tested by checking a single prompt. A model that has stopped answering ``Where did author X study?'' may still answer ``Which university awarded X their degree?'' correctly. Any honest evaluation of forgetting has to probe the behavior from several angles and accept that a negative result on one probe is not a proof of erasure. The second consequence is about evidence. Even when a model refuses to produce a memorized answer, the statistical fingerprints of having seen the data may persist in the probabilities it assigns. A model can be behaviorally silent and yet privately confident, and that gap is exactly what the membership inference analysis in Section~\ref{sec:bg-mia} is designed to expose. These two observations together motivate the operational, multi-metric stance the thesis takes toward forgetting, rather than the comforting but unverifiable language of complete semantic erasure.
+
+\section{Machine Unlearning: Exact and Approximate}
+\emph{Machine unlearning} is the problem of removing the influence of a designated subset of training data, the forget set $\mathcal{D}_f$, from an already-trained model, ideally at a fraction of the cost of retraining and without harming performance on the data we wish to keep, the retain set $\mathcal{D}_r$. The idea predates large language models. Cao and Yang framed it in terms of converting learning algorithms into a summation form whose statistics could be efficiently updated when data was removed \parencite{cao2015unlearning}, and the topic gained urgency as privacy regulation began to treat deletion as a right rather than a courtesy \parencite{gdpr2016}.
+
+It is useful to separate two families of approaches. \textbf{Exact unlearning} aims to produce a model indistinguishable from one that had never seen $\mathcal{D}_f$ at all. The gold standard is simply to retrain from scratch on $\mathcal{D}_r$, which is exact by construction but ruinously expensive for large models. The SISA framework of Bourtoule and colleagues makes exactness more affordable by sharding the training data, training a separate constituent model on each shard, and retraining only the shard that contained the deleted point \parencite{bourtoule2021machine}. This works well for classifiers trained from scratch, but it presupposes control over the original training procedure and a sharded design, neither of which holds for a pre-trained foundation model that one merely fine-tunes.
+
+\textbf{Approximate unlearning}, by contrast, gives up the guarantee of indistinguishability in exchange for tractability. Instead of reconstructing the model that never saw $\mathcal{D}_f$, it perturbs the existing model so that the influence of $\mathcal{D}_f$ is suppressed to an acceptable degree. There is no certificate of removal; success is something one measures rather than proves. For large language models, where retraining is off the table and the training pipeline is usually inherited rather than designed, approximate methods are the only realistic option, and they are what this thesis studies. A useful way to keep the goals straight is to think of three competing pressures that any approximate method must balance: \emph{forgetting}, the degree to which reliance on $\mathcal{D}_f$ is reduced; \emph{utility}, the degree to which everything else is preserved; and \emph{efficiency}, the compute and memory the procedure consumes. To these three the present work insists on adding a fourth, \emph{privacy}: the degree to which residual traces of $\mathcal{D}_f$ remain detectable by an attacker, regardless of what the model says out loud.
+
+\section{Gradient-Based Forgetting}
+The most direct way to make a model stop reproducing a fact is to train it to do the opposite of what training normally does. Recall that ordinary fine-tuning minimizes the cross-entropy in Equation~\eqref{eq:ce}, rewarding the model for assigning high probability to correct answers. \emph{Gradient ascent} unlearning inverts this on the forget set: the objective becomes the negative of the cross-entropy, so that minimizing it \emph{increases} the loss on $\mathcal{D}_f$,
+\begin{equation}
+	\mathcal{L}_{\mathrm{GA}}(\theta) = -\,\mathcal{L}_{\mathrm{CE}}(\theta; \mathcal{D}_f).
+	\label{eq:ga}
+\end{equation}
+Carrying out a descent step on Equation~\eqref{eq:ga} is the same as taking an \emph{ascent} step on the original loss,
+\begin{equation}
+	\theta_{t+1} = \theta_t - \eta\,\nabla_\theta \mathcal{L}_{\mathrm{GA}}(\theta_t) = \theta_t + \eta\,\nabla_\theta \mathcal{L}_{\mathrm{CE}}(\theta_t; \mathcal{D}_f),
+	\label{eq:ga-update}
+\end{equation}
+which nudges the parameters away from any configuration that confidently reproduces the forget-set answers. The method is appealingly simple, costs no more than ordinary fine-tuning, and was among the first techniques applied to unlearning in language models \parencite{yao2023unlearning}.
+
+Its weakness is equally direct. Equation~\eqref{eq:ga} says nothing whatsoever about preserving the rest of the model. Because the parameters are shared, pushing them to fail on $\mathcal{D}_f$ can drag down performance on unrelated inputs, a manifestation of catastrophic forgetting. Unconstrained ascent also tends to be unstable: the loss it maximizes is unbounded above, so without a counterweight the optimization can run away, degrading the model wholesale rather than surgically. Empirical work on the coupling between forgetting and retained ability has made this trade-off precise, showing that the two move together in a way that aggressive objectives cannot escape \parencite{kalajdzievski2024scaling}.
+
+The responses to this weakness define the rest of the method landscape and, in miniature, the three strategies compared in this thesis. One response is to add an explicit retention term, mixing forgetting on $\mathcal{D}_f$ with continued learning on a slice of $\mathcal{D}_r$, so that every update carries a stabilizing signal; this is the idea behind the GAFT method of Chapter~\ref{chap:methodology}. A second response abandons ascent altogether and instead supervises the model toward a benign target, such as a refusal, turning forgetting into a re-alignment problem; this is the IDK approach. A third line of work reframes forgetting through the lens of preference optimization, replacing the unbounded ascent loss with a bounded objective that is less prone to collapse, as in negative preference optimization \parencite{zhang2024npo} and the broader family of preference-based methods descended from direct preference optimization \parencite{rafailov2023dpo}. The pure ascent baseline, with no counterweight at all, is retained in this study precisely because it isolates what the stabilizing mechanisms are buying.
+
+\section{Parameter-Efficient Fine-Tuning and LoRA}
+\label{sec:bg-lora}
+Fine-tuning every parameter of an eight-billion-parameter model is expensive. It requires storing gradients and optimizer state for the full parameter set, which can multiply the memory footprint several times over, and it produces a complete new copy of the model for every task. \emph{Parameter-efficient fine-tuning} sidesteps this by freezing the pre-trained weights and training only a small number of additional parameters. Low-Rank Adaptation, or LoRA, is the dominant member of this family \parencite{hu2022lora}.
+
+LoRA rests on the observation that the update a model needs in order to adapt to a new task often has low intrinsic rank: the change can be captured by a thin product of matrices rather than a full dense matrix. For a frozen weight matrix $W_0 \in \mathbb{R}^{d \times k}$, LoRA represents the adaptation as
+\begin{equation}
+	W = W_0 + \Delta W = W_0 + \frac{\alpha}{r}\,B A,
+	\label{eq:lora}
+\end{equation}
+where $B \in \mathbb{R}^{d \times r}$ and $A \in \mathbb{R}^{r \times k}$ are the only trainable parameters, the rank $r$ is chosen far smaller than $d$ and $k$, and $\alpha$ is a scaling constant that controls how strongly the adapter contributes. During training only $A$ and $B$ are updated, so the number of trainable parameters drops by orders of magnitude; at inference the product $BA$ can be folded back into $W_0$, adding no latency. The experiments in this thesis apply LoRA to the attention projections and the feed-forward projections of every transformer block, with $r = 16$ and $\alpha = 16$, and enable a rank-stabilized variant that rescales the adapter to keep its contribution well-behaved as the rank changes.
+
+LoRA matters here for two reasons beyond mere efficiency. First, it is half of the standard memory-constrained deployment recipe and so belongs in any study that claims to be deployment-realistic. Second, and more subtly, it changes what ``the model'' even means when we talk about forgetting. If the base weights are frozen and only a small adapter is trained, then whatever forgetting we achieve is achieved entirely within that adapter. Whether suppression confined to a low-rank adapter is as durable as suppression written into the full weights is a genuine open question, and one this thesis touches on when it considers how easily apparent forgetting might be reversed.
+
+\section{Low-Bit Quantization and the 4-Bit Pipeline}
+\label{sec:bg-quant}
+The other half of the deployment recipe is quantization. A model's weights are normally stored as 16- or 32-bit floating-point numbers. Quantization replaces these with a much coarser representation, mapping the continuous range of weight values onto a small set of discrete levels that can be stored in far fewer bits. In the affine scheme, a real value $w$ is encoded as an integer
+\begin{equation}
+	w_q = \mathrm{round}\!\left(\frac{w}{s}\right) + z,
+	\label{eq:quant}
+\end{equation}
+and recovered approximately as $\hat{w} = s\,(w_q - z)$, where $s$ is a scale and $z$ a zero-point chosen per tensor or per block. With four bits, $w_q$ can take only sixteen distinct values, so an enormous range of original weights is collapsed onto a tiny grid. The difference $\hat{w} - w$ is the quantization error, and it is present in every single weight of the model.
+
+Four-bit quantization in particular has become practical through methods such as the NF4 data type and the bitsandbytes backend, which were combined with LoRA in the QLoRA recipe of Dettmers and colleagues \parencite{dettmers2023qlora}, building on earlier work that made 8-bit inference viable at scale \parencite{dettmers2022int8}. QLoRA loads the base model in 4-bit precision, keeps it frozen, and trains LoRA adapters in higher precision on top, which is exactly the configuration used throughout this thesis. The appeal is concrete: a model that would need tens of gigabytes in full precision becomes small enough to fine-tune on a single free-tier GPU.
+
+The reason quantization is not merely a footnote in a study of unlearning is that the error it introduces interacts with forgetting in a dangerous way. An unlearning update is, by design, a small and deliberate perturbation of the weights, just large enough to suppress the forget set. Quantization is a second, undirected perturbation applied afterward. If the unlearning edit is comparable in magnitude to the quantization grid spacing, rounding can simply wash it out, returning the affected weights to values close to where they started. Zhang and colleagues demonstrated precisely this failure mode: models that had apparently forgotten content at full precision recovered the suppressed knowledge once quantized, an embarrassingly simple way to undo unlearning \parencite{zhang2024quantization}. Their finding is the empirical anchor for this thesis's central methodological choice. Rather than unlearn in full precision and quantize as an afterthought, every method here is trained and evaluated inside the 4-bit pipeline, so that whatever forgetting is measured is forgetting that survives quantization rather than forgetting that quantization might quietly reverse.
+
+\section{Privacy Attacks and Membership Inference}
+\label{sec:bg-mia}
+Behavioral metrics ask what a model says. Privacy attacks ask what a model knows. A \emph{membership inference attack} tries to determine whether a particular example was part of a model's training data, using only access to the model's outputs \parencite{shokri2017mia}. The original attacks targeted classifiers and exploited a simple asymmetry: models tend to be more confident on examples they were trained on than on examples they were not. By training auxiliary ``shadow'' models that imitate the target and learning to recognize the confidence signature of membership, an adversary can guess, better than chance, who was in the training set.
+
+For language models the signal is not class confidence but token likelihood. A model that has seen a sequence during training generally assigns it higher probability, token by token, than a comparable sequence it has never seen. The challenge is that some tokens are easy and high-probability for everyone, member or not, so raw average likelihood is a noisy detector. The Min-$k$\% Prob method of Shi and colleagues sharpens it by looking only at the tokens the model finds \emph{hardest} \parencite{shi2024minkprob}. For a sequence $y = (y_1, \dots, y_m)$, one computes the per-token log-probabilities, selects the $k\%$ of positions with the lowest probability, and averages the log-probability over just that worst-case subset:
+\begin{equation}
+	\mathrm{Min\text{-}}k\%(y) = \frac{1}{|\mathcal{S}_k|} \sum_{i \in \mathcal{S}_k} \log p_\theta\!\left(y_i \mid y_{<i}\right),
+	\label{eq:minkprob}
+\end{equation}
+where $\mathcal{S}_k$ indexes the $k\%$ lowest-probability tokens. The intuition is that a non-member sequence will contain at least a few genuinely surprising tokens that drag this worst-case average down, whereas a memorized or strongly-influenced sequence stays unusually comfortable even in its least likely positions. Because the right choice of $k$ is not known in advance, this thesis sweeps several thresholds and aggregates over them, and trains a support vector classifier on the resulting features to separate forget-set members from non-members.
+
+The reason membership inference earns a place alongside the behavioral metrics is the gap noted earlier in Section~\ref{sec:bg-mia}'s motivation: a model can be made to stop \emph{saying} a fact while continuing to \emph{know} it in the statistical sense the attack measures. A method that scores well on forgetting but leaves the membership signal intact has not really protected the underlying data; it has only hidden it from casual inspection. Treating a privacy attack as a first-class evaluation axis, rather than an afterthought, is one of the ways this study tries to avoid mistaking silence for deletion.
+
+\section{The TOFU Benchmark}
+\label{sec:bg-tofu}
+Studying forgetting cleanly requires knowing exactly what the model knew to begin with. This is awkward with real-world facts, because a pre-trained model has likely encountered them already through ordinary pre-training, contaminating any measurement of what fine-tuning taught and what unlearning removed. The TOFU benchmark of Maini and colleagues solves this with a deliberately artificial dataset \parencite{maini2024tofu}. TOFU consists of question--answer pairs about two hundred entirely \emph{fictitious} authors, invented for the benchmark and absent from any real corpus. Because the model can only know these authors if we explicitly teach them, the benchmark gives a controlled setting in which the boundary between learned and unlearned content is unusually sharp.
+
+TOFU partitions its data into a forget set and a complementary retain set, with the standard splits forgetting one, five, or ten percent of the authors. This thesis uses the \texttt{forget10} split, removing ten percent of the authors, paired with the corresponding \texttt{retain90} set. Crucially, the benchmark also ships auxiliary evaluation sets that test general capability rather than the fictitious content itself, so that one can check whether unlearning has damaged abilities it should have left alone. Table~\ref{tab:tofu-splits} summarizes the splits used in this work and what each is meant to reveal.
+
+\begin{table}[htbp]
+	\centering
+	\caption{The TOFU evaluation splits used in this thesis and the question each is designed to answer.}
+	\label{tab:tofu-splits}
+	\begin{tabular}{p{3.0cm} p{4.0cm} p{6.0cm}}
+		\toprule
+		\textbf{Split} & \textbf{Content} & \textbf{What it measures} \\
+		\midrule
+		Forget (\texttt{forget10}) & Fictitious authors to be unlearned & Whether reliance on the targeted facts has been reduced \\
+		Retain (\texttt{retain90}) & Remaining fictitious authors & Whether closely-related knowledge survives unlearning \\
+		Real authors & Genuine, well-known authors & Whether unrelated factual ability is preserved \\
+		World facts & General world knowledge & Whether broad competence is preserved \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+Alongside the splits, TOFU defines a set of metrics that the thesis adopts and explains in full in Chapter~\ref{chap:methodology}. In brief, these include the probability the model assigns to the correct answer, a \emph{truth ratio} comparing the likelihood of correct versus incorrect answers, the ROUGE-L overlap between generated and gold answers, plain answer accuracy, and an aggregate \emph{Forget Quality} score. Forget Quality deserves a preview because it is unlike the others: rather than scoring forget-set answers directly, it applies a Kolmogorov--Smirnov test to compare the \emph{distribution} of truth ratios on the forget set against that on the retain set. A well-unlearned model should make its forget-set behavior statistically resemble data it never memorized, and Forget Quality captures how convincingly it does so. This distributional view is one reason the benchmark is well suited to a study that is suspicious of any single point metric.
+
+\section{Summary}
+The pieces are now on the table. A language model is an autoregressive distribution whose knowledge is smeared, in distributed and partly memorized form, across billions of shared parameters, which is what makes targeted forgetting both necessary and hard. Approximate unlearning attacks this by perturbing the model to suppress a forget set while preserving everything else, with gradient ascent as the simplest lever and retain-regularization or refusal-supervision as the common ways to tame it. Deployment realism brings in LoRA, which confines the edit to a small adapter, and 4-bit quantization, which is not just an efficiency trick but a perturbation that can silently undo forgetting. Finally, behavioral success is not enough: a membership inference attack built on Min-$k$\% likelihoods checks whether the model still privately betrays the data it claims to have forgotten, and the TOFU benchmark supplies the controlled, contamination-free arena in which all of this can be measured. The next chapter surveys how the research community has combined these ingredients, and where the gaps lie that this thesis sets out to address.
+
+%========================================================================================
+%	CHAPTER 3 - LITERATURE REVIEW  (scaffold)
+%========================================================================================
+\chapter{Literature Review}
+\label{chap:literature}
+
+\section{Introduction}
+Where the previous chapter explained the ideas, this one examines the work that has shaped them. The literature on machine unlearning has grown quickly, and the slice relevant to this thesis touches several communities at once: the privacy researchers who first asked how to make a model forget, the language-model practitioners who adapted those ideas to billion-parameter networks, the efficiency-minded engineers who made such networks deployable, and the security researchers who keep finding ways to recover what was meant to be gone. The review is organized to trace this arc. It begins with the classical formulations, follows the migration of unlearning into large language models, and then looks in turn at the three method families this thesis compares, at the still-thin literature on quantization and forgetting, at how privacy is evaluated, and at the benchmarks that make any of it measurable. The chapter closes by naming the specific gap that the study addresses. Throughout, the emphasis is less on cataloguing methods than on noticing what the field has tended to assume, and what those assumptions leave unexamined.
+
+\section{Unlearning in Classical Machine Learning}
+The vocabulary of unlearning was set well before large language models existed. Cao and Yang introduced the problem in its modern form, observing that many learning algorithms can be rewritten in a summation form whose intermediate statistics can be cheaply updated when a training point is withdrawn, so that the model's dependence on that point is removed without a full retrain \parencite{cao2015unlearning}. Their framing established the two commitments that still define the field: that deletion should be meaningfully complete, and that it should be far cheaper than retraining from scratch.
+
+The most influential systems-level answer came from Bourtoule and colleagues, whose SISA design partitions the training data into disjoint shards, trains an independent constituent model on each, and aggregates their predictions \parencite{bourtoule2021machine}. When a data point must be deleted, only the single shard that contained it needs retraining, which bounds the cost of forgetting. SISA is elegant and, within its assumptions, exact. Those assumptions are exactly what make it inapplicable here. SISA requires that one designs the training procedure from the outset, controls the sharding, and trains the constituent models oneself. A practitioner who downloads a pre-trained foundation model and fine-tunes it has none of these levers. The classical line, in other words, solved unlearning for models you build, not for models you inherit, and the language-model setting is overwhelmingly the latter. This mismatch is the reason the field had to reinvent itself for LLMs rather than simply port the existing toolkit.
+
+\section{Unlearning in Large Language Models}
+The pivot to language models is usually credited to Yao and colleagues, who showed that gradient ascent, fine-tuning a model to maximize rather than minimize loss on a forget set, could suppress targeted content in an LLM while keeping the procedure cheap \parencite{yao2023unlearning}. Their work matters less for the specific algorithm than for the demonstration that approximate, gradient-based forgetting was both feasible and useful at this scale, and for honestly reporting the collateral damage to unrelated capabilities. It set the template that most subsequent work either refines or reacts against.
+
+A contrasting strategy arrived almost simultaneously with Eldan and Russinovich's study of erasing a specific body of knowledge, the Harry Potter corpus, from a model \parencite{eldan2023harrypotter}. Rather than ascend the loss, they identified tokens strongly associated with the target content and fine-tuned the model toward generic, plausible alternatives, effectively overwriting the memorized material with bland substitutes. The approach previewed a tension that runs through the present thesis: replacing a memorized answer with a fabricated alternative can look like forgetting on the surface while leaving the question of what the model truly retains unresolved. As the area matured, position papers and surveys began to impose order on the proliferating methods. Liu and colleagues, in particular, argued for rethinking what unlearning in LLMs should even mean, distinguishing the goals of removing knowledge, suppressing behavior, and protecting privacy, and warning that these are routinely conflated \parencite{liu2024rethinking}. Broader treatments of the problem space have echoed the same concern, that the community lacks a shared, operational notion of success \parencite{koundinya2024unlearning}. This thesis takes that critique seriously and adopts an explicitly operational definition rather than appealing to erasure as an ideal.
+
+\section{Retain-Regularized and Multi-Objective Approaches}
+The central weakness of pure ascent, its indifference to everything outside the forget set, prompted a family of methods that fold retention directly into the objective. The simplest versions add a term that continues to minimize loss on a retain set while ascending on the forget set, so that each update is pulled in two directions at once. The motivation is not merely empirical tidiness. Kalajdzievski's analysis of scaling laws for forgetting during fine-tuning made the coupling quantitative, showing that the loss inflicted on retained data grows in a predictable relationship with the strength of forgetting \parencite{kalajdzievski2024scaling}. If forgetting and forgetting-elsewhere move together, then an explicit retention counterweight is not optional polish but a structural necessity for any method that hopes to be surgical.
+
+Memory-supervised variants take the multi-objective idea further. MEOW, for instance, generates inverted facts, deliberately false statements about the forget targets, and trains the model on them under supervision, so that forgetting is realized as overwriting with controlled counterfactuals rather than as unbounded ascent \parencite{gu2024meow}. What unites these approaches is the recognition that telling a model what \emph{not} to do is unstable, and that pairing it with something to do instead yields a better-behaved optimization. The retain-regularized method evaluated in this thesis, GAFT, sits squarely in this tradition: it mixes a forgetting signal and a retention signal in fixed proportion within every training batch. The contribution of the present study is not to invent this family but to ask how well it holds up when the whole procedure is squeezed into four-bit precision, a setting these prior works did not examine.
+
+\section{Refusal and Preference-Based Suppression}
+A third family abandons loss-ascent entirely and reframes forgetting as alignment. Instead of degrading the model's answer, these methods supervise it toward an acceptable response, most directly a refusal such as ``I do not have that information.'' The appeal is that the model is never asked to become wrong, only to decline, which in principle should leave its general competence undisturbed while withholding the sensitive content. This is the lineage of the IDK method studied here. Its intuitive promise, clean abstention on demand, is precisely what this thesis puts to the test, and, as Chapter~\ref{chap:results} shows, the promise is not kept in the way one would hope.
+
+Closely related is the preference-optimization view, imported from alignment research. Direct preference optimization recast reinforcement learning from human feedback as a simple classification-style objective over preferred and dispreferred responses \parencite{rafailov2023dpo}, and unlearning researchers noticed that the forget set is naturally a source of dispreferred behavior. Negative preference optimization builds on this directly, treating forget examples as negatives within a bounded objective whose key virtue is that it avoids the catastrophic collapse to which unbounded ascent is prone \parencite{zhang2024npo}. Other recent systems pursue robustness and practicality from different angles: OBLIVIATE positions itself as a robust, deployable unlearning procedure \parencite{xu2025obliviate}, while LLM-Eraser approaches the problem through adaptive prompt tuning rather than weight surgery \parencite{xu2024llmeraser}. The breadth of this family underscores a point relevant to the thesis: refusal and preference methods are widely assumed to produce trustworthy suppression, yet that assumption is rarely checked at the level of individual generations. A method can post excellent aggregate forgetting numbers while the underlying outputs tell a very different story.
+
+\section{Parameter-Efficient Unlearning}
+Because retraining is expensive even when it is only fine-tuning, several authors have asked whether unlearning can be confined to the small adapters of parameter-efficient fine-tuning rather than the full weight set. Ding and colleagues offer a unified treatment, showing that low-rank adaptation can deliver effective forgetting at a fraction of the computational cost and, in some configurations, with a better privacy-utility balance than full fine-tuning \parencite{ding2024peft}. This builds naturally on the broader success of LoRA as an adaptation method \parencite{hu2022lora} and is attractive for the same reasons LoRA is: a forget operation that touches only a thin adapter is cheap to compute and easy to store or discard.
+
+There is, however, an unresolved question lurking beneath this convenience, and it is one the present work is positioned to probe. If forgetting lives entirely in a low-rank adapter laid over a frozen base, then the base model still contains the original knowledge in full; the adapter merely steers around it. Whether such steering is robust, or whether it can be peeled away or perturbed back to the original behavior, depends on how the adapter interacts with downstream transformations of the model. Crucially, the parameter-efficient unlearning literature has overwhelmingly evaluated in full precision. The interaction between low-rank forgetting and aggressive quantization, the regime in which LoRA is most often actually deployed, has received far less scrutiny than its prevalence in practice would warrant.
+
+\section{Quantization and the Fragility of Forgetting}
+The most pointed warning for this thesis comes from work on how deployment transformations can reverse unlearning. Zhang and colleagues demonstrated that a model which has apparently forgotten content at full precision can recover that content once it is quantized, because the unlearning edit is small enough to be erased by the rounding that quantization imposes \parencite{zhang2024quantization}. The result is as practically alarming as it is conceptually clean: a step that engineers regard as a routine efficiency optimization can silently resurrect deleted data. It implies that any unlearning result reported only in full precision carries an asterisk, since the model that ships may not have forgotten what the evaluated model did.
+
+Work from the opposite direction reinforces the same lesson, that forgetting and model transformations interact in ways that must be designed for rather than assumed away. Lee and colleagues show that distilling an unlearned model into a student can make the forgetting markedly more robust and harder to reverse, suggesting that the durability of forgetting is not an intrinsic property of an unlearning method but something that subsequent processing can either erode or harden \parencite{lee2025distillation}. Taken together, these two findings frame quantization not as an implementation footnote but as a first-class part of the threat model. They also expose the gap most directly relevant here. The standard reaction to the quantization-recovery result would be to unlearn more aggressively, or to repair forgetting after quantizing. The alternative this thesis pursues, performing and evaluating unlearning entirely \emph{within} the 4-bit pipeline so that any measured forgetting is already quantization-survivable, has not been systematically explored across method families.
+
+\section{Privacy Evaluation and Membership Inference for LLMs}
+Evaluating whether a model has truly forgotten requires looking past what it says, and the tool of choice is the membership inference attack. The technique originates with Shokri and colleagues, who showed that the confidence patterns of a classifier betray which examples it was trained on, and built shadow models to exploit that signal \parencite{shokri2017mia}. For language models the relevant signal shifted from class confidence to token likelihood, and the stakes rose sharply once Carlini and colleagues demonstrated that large models can be induced to emit memorized training data verbatim, including rare and sensitive strings \parencite{carlini2021extracting}. Extraction is the worst case; membership inference is the more general and more measurable one.
+
+The membership signal for modern LLMs has itself been refined. The Min-$k$\% Prob method of Shi and colleagues focuses on a sequence's least likely tokens rather than its average likelihood, on the reasoning that a genuine non-member will contain at least a few truly surprising tokens whereas a memorized sequence stays comfortable even at its worst positions \parencite{shi2024minkprob}. This is the attack family the thesis adopts. What the broader survey of this area reveals, and what motivates its prominence in this study, is a methodological imbalance: a large share of unlearning papers report only behavioral metrics such as accuracy or text overlap on the forget set, and treat a drop in those numbers as sufficient evidence of success. Far fewer subject their unlearned models to a privacy attack. Yet behavioral suppression and privacy protection are distinct properties, and a method can achieve the first while failing the second. Elevating membership inference to a primary axis of evaluation, rather than an optional add-on, is one of the ways this thesis tries to keep its conclusions honest.
+
+\section{Benchmarks for Unlearning}
+None of these measurements mean much without a controlled setting, and here the TOFU benchmark of Maini and colleagues has become the de facto standard for LLM unlearning \parencite{maini2024tofu}. Its decisive design choice is to build the dataset around entirely fictitious authors, so that the model can only know the target facts if they were explicitly taught, eliminating the contamination that plagues attempts to measure forgetting on real-world knowledge. Alongside clean forget and retain splits, TOFU supplies auxiliary sets that probe unrelated competence, and a suite of metrics culminating in the distributional Forget Quality score described in the previous chapter. These features make it well suited to a study that distrusts single point metrics and wants to compare methods on equal footing.
+
+The benchmark is not without limits, and acknowledging them sharpens the contribution of this work. TOFU evaluates a fixed kind of content, biographical facts about invented people, and a fixed set of forget ratios, and, like most of the literature it serves, it is almost always run in full precision. The benchmark provides the arena; it does not, by itself, ask how the contest changes when the model has been compressed to four bits, repeated across seeds, and additionally subjected to a privacy attack. Supplying those missing dimensions, on top of the benchmark's controlled foundation, is precisely the experimental program of this thesis.
+
+\section{Positioning Against Prior Work}
+\label{sec:positioning}
+To make the contribution concrete rather than rhetorical, Table~\ref{tab:priorwork} places this study side by side with representative prior work, summarizing what each did, the setting in which they did it, and what they reported. Table~\ref{tab:capability} then condenses the same comparison into a capability matrix across the evaluation dimensions this thesis argues matter most. Read together, the two tables make a single point: earlier methods were developed and validated almost entirely in full precision, usually from a single run, and were rarely subjected both to a privacy attack and to a generation-level inspection of what the ``forgotten'' model actually outputs. To the best of my knowledge, this study is the first to bring all of these dimensions together within a 4-bit quantized, LoRA-based pipeline.
+
+\begin{table}[htbp]
+\centering
+\caption{Positioning of this thesis against representative prior work on machine unlearning. The final row (this work) is highlighted.}
+\label{tab:priorwork}
+\footnotesize
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{p{2.0cm} p{2.6cm} p{2.2cm} p{2.4cm} p{3.0cm}}
+\hline
+\textbf{Study} & \textbf{Approach} & \textbf{Model \& precision} & \textbf{Evaluation} & \textbf{Reported finding} \\
+\hline
+Cao \& Yang \parencite{cao2015unlearning} & Statistical-query ``summation form'' deletion & Classical ML, full precision & Deletion completeness, cost & Foundational exact unlearning; efficient for simple models, not LLMs. \\
+Bourtoule et al.\ \parencite{bourtoule2021machine} & SISA: sharded training + partial retrain & Classifiers, full precision & Exactness vs.\ retrain cost & Exact deletion, but needs control of the training pipeline; not for pretrained LLMs. \\
+Yao et al.\ \parencite{yao2023unlearning} & Gradient ascent & LLMs, full precision & Forgetting, utility & First practical LLM unlearning; effective but with utility cost; no privacy attack. \\
+Eldan \& Russinovich \parencite{eldan2023harrypotter} & Overwrite target tokens with generic text & LLaMA-7B, full precision & Behavioral recall & Suppresses a target corpus by substitution; no privacy audit. \\
+Maini et al.\ (TOFU) \parencite{maini2024tofu} & Benchmark + baselines (GA, GD, KL) & LLaMA-2-7B, full precision & TOFU + Forget Quality & Standard benchmark; introduces Forget Quality; full precision, no MIA. \\
+Gu et al.\ (MEOW) \parencite{gu2024meow} & Inverted-fact memory supervision & LLMs, full precision & TOFU-style forget/utility & Improves forget--utility balance; full precision; no quantization/MIA. \\
+Ding et al.\ \parencite{ding2024peft} & Unified PEFT (LoRA) unlearning & LLMs + LoRA, full precision & Forget/utility, some privacy & Cheaper via adapters; better trade-off; evaluated in full precision. \\
+Zhang et al.\ (NPO) \parencite{zhang2024npo} & Negative preference optimization & LLMs, full precision & TOFU forget/utility & Bounded objective avoids collapse; full precision, single setting. \\
+Zhang et al.\ (quantization) \parencite{zhang2024quantization} & Quantize an unlearned model & Unlearn full precision, then quantize & Knowledge recovery & Quantization \emph{recovers} forgotten knowledge; motivates evaluating in-quantization. \\
+\hline
+\textbf{This work (Ali \& Farooq)} & \textbf{PGA, GAFT, IDK under one protocol} & \textbf{LLaMA-3-8B, 4-bit + LoRA (end to end)} & \textbf{TOFU + Min-$k$\% MIA + 1{,}200-gen audit, 3 seeds} & \textbf{GAFT best balance; IDK's low overlap is 86\% hallucination, not abstention; PGA worst.} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Evaluation-dimension coverage of representative prior work versus this thesis. ``Post hoc'' indicates quantization applied after unlearning rather than throughout.}
+\label{tab:capability}
+\scriptsize
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{p{2.6cm} c c c c c c}
+\hline
+\textbf{Study} & \textbf{4-bit} & \textbf{LoRA} & \textbf{Multi-seed} & \textbf{MIA} & \textbf{Gen.\ audit} & \textbf{Multi-method} \\
+\hline
+Yao et al.\ \parencite{yao2023unlearning} & No & No & No & No & No & No \\
+Eldan \& Russ.\ \parencite{eldan2023harrypotter} & No & No & No & No & Partial & No \\
+Maini et al.\ \parencite{maini2024tofu} & No & No & No & No & No & Yes \\
+Gu et al.\ \parencite{gu2024meow} & No & No & No & No & No & No \\
+Ding et al.\ \parencite{ding2024peft} & No & Yes & No & Partial & No & Yes \\
+Zhang et al.\ \parencite{zhang2024quantization} & Post hoc & No & No & No & No & No \\
+\hline
+\textbf{This work} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Research Gap}
+Drawing the threads together, four gaps emerge from the literature, and the study is designed around them.
+
+\begin{enumerate}
+	\item \textbf{Precision realism.} The overwhelming majority of unlearning methods are developed and evaluated in full precision, even though their natural deployment habitat is the quantized, low-rank pipeline, and even though quantization has been shown to reverse forgetting. There is little systematic evidence on how representative method families behave when unlearning is performed and measured entirely within a 4-bit pipeline. This thesis supplies that evidence.
+	\item \textbf{Statistical robustness.} Results are frequently reported from single runs, despite unlearning being known to be sensitive to training stochasticity. Conclusions drawn this way may not survive a change of random seed. This thesis repeats every configuration across three seeds and reports aggregated statistics.
+	\item \textbf{Evaluation breadth.} Behavioral metrics dominate, and privacy attacks are under-used, so that a method may appear successful while still leaking membership. This thesis evaluates forgetting, cross-split utility, and Min-$k$\% membership inference jointly.
+	\item \textbf{The abstention-versus-fabrication question.} When a method drives down forget-set overlap, the literature seldom inspects the individual generations to ask \emph{why}. Low overlap is taken as success without checking whether the model is refusing cleanly or fabricating confidently. This thesis audits 1{,}200 generations from the refusal-based method to settle the question directly.
+\end{enumerate}
+
+No single prior work is wrong for leaving these gaps open; each made reasonable scope decisions. The contribution claimed here is to close all four at once within a single, controlled comparison, and in doing so to test whether the optimism of the full-precision literature carries over to the constrained conditions under which these methods are actually used.
+
+\section{Summary}
+The review traced unlearning from its classical, retrain-bounded origins through its reinvention for large language models, and across the three method families, ascent-based, retain-regularized, and refusal- or preference-based, that this thesis compares. It then surveyed the thinner but consequential literature showing that quantization can undo forgetting, the privacy-attack tradition that lets us check forgetting against what a model still secretly knows, and the TOFU benchmark that makes controlled measurement possible. The recurring observation is that the field has been optimistic under idealized conditions and comparatively quiet about deployment realism, statistical robustness, privacy, and the qualitative reality of what ``forgotten'' outputs actually contain. The next chapter turns this diagnosis into a concrete methodology.
+
+%========================================================================================
+%	CHAPTER 4 - METHODOLOGY  (scaffold)
+%========================================================================================
+\chapter{Methodology}
+\label{chap:methodology}
+
+This chapter sets out how the study was actually carried out. It begins with the design principles that govern the whole comparison, then states the problem formally and commits to an operational definition of what ``forgetting'' is taken to mean. The three unlearning strategies are defined one at a time, each with its training objective and, where it adds clarity, an algorithmic description. The two-stage protocol that produces a model worth unlearning from is then described, followed by the evaluation framework that measures the three properties the thesis cares about: forgetting, utility, and privacy. Implementation-level details such as exact hyperparameter values and the software stack are deferred to Chapter~\ref{chap:setup}; the focus here is on the logic of the method.
+
+\section{Design Philosophy}
+Two principles shape every choice that follows. The first is \emph{fair isolation}. If three methods are to be compared, then any difference in their outcomes should be attributable to the methods themselves and not to incidental differences in the model, the data, the optimizer, or the random seed. The study therefore fixes everything except the unlearning objective. All three strategies start from the identical memorized checkpoint, use the same base model and adapter configuration, the same optimizer and schedule, the same forget and retain splits, and the same three random seeds. Only the loss the model is trained against, and the way its training data is constructed, changes from one method to the next. This makes the comparison clean at the cost of not separately tuning each method to its own best advantage, a trade-off discussed candidly among the limitations.
+
+The second principle is \emph{deployment realism}. As argued in the previous chapters, the natural habitat of these methods is a memory-constrained pipeline, and quantization is not a neutral afterthought but a transformation that can reverse forgetting. The study therefore performs every step, memorization, unlearning, and evaluation, on a model that is already loaded and adapted in 4-bit precision. Nothing is unlearned in full precision and quantized later. The numbers reported are the numbers a practitioner working inside the quantized pipeline would actually obtain, which is the only kind of number the research questions care about.
+
+\section{An Operational Definition of Forgetting}
+Because complete semantic erasure cannot be verified in a model whose knowledge is distributed and partly memorized, this thesis declines to use it as the criterion of success. Instead it adopts an operational definition built from three measurable properties, each of which must hold for forgetting to count as adequate.
+
+\begin{enumerate}
+	\item \textbf{Reduced reliance.} The model's dependence on the forget set is demonstrably lowered, as seen in reduced answer accuracy, reduced overlap with the memorized gold answers, and a shift in the truth-ratio distribution toward that of data the model never memorized.
+	\item \textbf{Preserved utility.} Performance on everything the model was not asked to forget, the retain set and the auxiliary real-author and world-fact sets, remains close to its pre-unlearning level.
+	\item \textbf{Minimized privacy leakage.} Residual membership signals, measured by a Min-$k$\% membership inference attack, are driven down toward the no-leakage baseline rather than merely hidden behind a refusal.
+\end{enumerate}
+
+Framing forgetting this way has a useful consequence: it makes ``success'' a vector rather than a scalar, and it refuses to let a method claim victory on one property while quietly failing another. It also exposes a failure mode that a single accuracy number would conceal, namely a model that satisfies the first property by fabricating replacement content rather than by genuinely abstaining. Catching that distinction requires looking at the generations themselves, which is why the evaluation framework later in this chapter is paired with a behavioral audit in Chapter~\ref{chap:results}.
+
+\section{Problem Formulation}
+Let $f_\theta$ denote the language model with parameters $\theta$, of which only the low-rank adapter weights introduced in Section~\ref{sec:bg-lora} are trainable while the quantized base weights stay frozen. Following the TOFU setup, the data is partitioned into a forget set $\mathcal{D}_f$ and a retain set $\mathcal{D}_r$; concretely $\mathcal{D}_f$ is the \texttt{forget10} split and $\mathcal{D}_r$ the \texttt{retain90} split. Each example is a question--answer pair $(x, y)$, and the supervised loss on any dataset is the length-averaged cross-entropy of Equation~\eqref{eq:ce}.
+
+Targeted unlearning seeks parameters that simultaneously reduce reliance on $\mathcal{D}_f$ and preserve behavior on $\mathcal{D}_r$. Written as a multi-objective problem, the ideal is
+\begin{equation}
+	\theta^\star = \arg\min_{\theta}\; \Big[\, \underbrace{-\,\mathcal{R}\big(f_\theta; \mathcal{D}_f\big)}_{\text{forget}} \;+\; \lambda\, \underbrace{\mathcal{U}\big(f_\theta; \mathcal{D}_r\big)}_{\text{retain}} \,\Big],
+	\label{eq:goal}
+\end{equation}
+where $\mathcal{R}$ measures reliance on the forget set (to be reduced), $\mathcal{U}$ measures loss of utility on the retain set (to be kept small), and $\lambda \ge 0$ trades the two against each other. The three methods studied here are best understood as three different concrete choices for how to instantiate the two terms of Equation~\eqref{eq:goal}: PGA keeps only the first term, GAFT keeps both, and IDK rewrites the first term as a supervised target rather than a quantity to be ascended. The subsections that follow make each choice explicit.
+
+\section{Pure Gradient Ascent (PGA)}
+The first method is the most direct possible reading of ``reduce reliance on $\mathcal{D}_f$,'' and it serves as the unconstrained baseline against which the value of any stabilizing mechanism can be judged. PGA simply reverses the sign of the training loss on the forget set and ignores the retain term of Equation~\eqref{eq:goal} entirely, so $\lambda = 0$. Its objective is
+\begin{equation}
+	\mathcal{L}_{\mathrm{PGA}}(\theta) = -\,\mathcal{L}_{\mathrm{CE}}(\theta; \mathcal{D}_f).
+	\label{eq:pga}
+\end{equation}
+Minimizing Equation~\eqref{eq:pga} pushes the adapter weights toward configurations under which the model assigns low probability to the gold forget answers, as detailed in the update rule of Equation~\eqref{eq:ga-update}. Training data consists of the forget split alone; the retain split plays no role during optimization. The expectation, confirmed in Chapter~\ref{chap:results}, is that PGA forgets but pays for it: with nothing to anchor the rest of the model, the optimization is free to wander, and there is no mechanism guarding either retained utility or the privacy signal. PGA is included not because it is expected to win but because it establishes the floor.
+
+\section{Gradient Ascent with a Retain Constraint (GAFT)}
+GAFT keeps both terms of Equation~\eqref{eq:goal}. It combines forgetting on $\mathcal{D}_f$ with continued supervised learning on a sampled retain subset $\mathcal{D}_r' \subseteq \mathcal{D}_r$, so that every optimization step receives a destabilizing forget signal and a stabilizing retain signal at the same time. The dataset-level objective is
+\begin{equation}
+	\mathcal{L}_{\mathrm{GAFT}}(\theta) = -\,\mathcal{L}_{\mathrm{CE}}(\theta; \mathcal{D}_f) \;+\; \gamma\,\mathcal{L}_{\mathrm{CE}}(\theta; \mathcal{D}_r'),
+	\label{eq:gaft}
+\end{equation}
+where $\gamma$ is the retain weight, set to $0.7$ in this work. The first term ascends the loss on forget examples; the second descends it on retain examples, pinning the model to the behavior it should keep.
+
+What distinguishes GAFT from a naive weighted sum is how the two signals are mixed at the batch level. Rather than trusting random sampling to balance forget and retain examples within each mini-batch, the method enforces a fixed composition through a custom mixed-factor sampler. Each example carries a factor label $s_i \in \{-1, +1\}$, with $-1$ marking a forget example and $+1$ a retain example, and every batch is constructed to contain one of each (a batch size of two). The per-batch loss can then be written compactly in terms of the factor labels,
+\begin{equation}
+	\mathcal{L}_{\mathrm{batch}} = \frac{1}{|\mathcal{B}|}\sum_{i \in \mathcal{B}} \Big[\, \mathbf{1}[s_i = -1]\,\big(-\mathcal{L}_{\mathrm{CE}}^{(i)}\big) \;+\; \gamma\,\mathbf{1}[s_i = +1]\,\mathcal{L}_{\mathrm{CE}}^{(i)} \,\Big],
+	\label{eq:gaft-batch}
+\end{equation}
+where $\mathcal{L}_{\mathrm{CE}}^{(i)}$ is the cross-entropy on example $i$ and $\mathbf{1}[\cdot]$ is the indicator function. Guaranteeing that each gradient step sees both a forget and a retain example, rather than occasionally an all-forget batch, is what makes GAFT's optimization markedly steadier than PGA's. Algorithm~\ref{alg:gaft} states the batch construction and loss explicitly.
+
+\begin{algorithm}[htbp]
+	\DontPrintSemicolon
+	\SetAlgoLined
+	\KwIn{forget set $\mathcal{D}_f$, retain set $\mathcal{D}_r$, retain weight $\gamma$, learning rate $\eta$, steps $T$}
+	\KwOut{unlearned adapter parameters $\theta$}
+	Tag every $(x,y)\in\mathcal{D}_f$ with factor $s=-1$ and every $(x,y)\in\mathcal{D}_r$ with factor $s=+1$\;
+	\For{$t \leftarrow 1$ \KwTo $T$}{
+		Sample one forget example and one retain example to form batch $\mathcal{B}$ of size $2$\;
+		Compute per-example cross-entropy $\mathcal{L}_{\mathrm{CE}}^{(i)}$ for each $i \in \mathcal{B}$\;
+		$\mathcal{L}_{\mathrm{batch}} \leftarrow \dfrac{1}{|\mathcal{B}|}\sum_{i\in\mathcal{B}}\big[\mathbf{1}[s_i{=}{-}1](-\mathcal{L}_{\mathrm{CE}}^{(i)}) + \gamma\,\mathbf{1}[s_i{=}{+}1]\,\mathcal{L}_{\mathrm{CE}}^{(i)}\big]$\;
+		$\theta \leftarrow \theta - \eta\,\nabla_\theta \mathcal{L}_{\mathrm{batch}}$ \tcp*{update adapter only}
+	}
+	\caption{GAFT: gradient ascent with a fixed-composition retain constraint.}
+	\label{alg:gaft}
+\end{algorithm}
+
+\section{IDK Refusal Tuning}
+The third method does not ascend any loss. It reinterprets forgetting as a problem of supervised re-alignment: instead of degrading the model on the forget answers, it teaches the model to respond to forget questions with an explicit abstention. Each forget example $(x, y)$ is transformed by discarding the original answer and substituting a fixed refusal string $y_{\mathrm{idk}} = $ ``\textit{I do not have that information.}'', producing a relabeled set
+\begin{equation}
+	\mathcal{D}_f^{\mathrm{idk}} = \big\{\, (x,\, y_{\mathrm{idk}}) : (x, y) \in \mathcal{D}_f \,\big\}.
+	\label{eq:idk-set}
+\end{equation}
+The model is then fine-tuned with ordinary cross-entropy, descending the loss, on the union of this relabeled forget set and a sampled retain subset:
+\begin{equation}
+	\mathcal{L}_{\mathrm{IDK}}(\theta) = \mathcal{L}_{\mathrm{CE}}\big(\theta;\; \mathcal{D}_f^{\mathrm{idk}} \cup \mathcal{D}_r'\big).
+	\label{eq:idk}
+\end{equation}
+Because every term in Equation~\eqref{eq:idk} is a standard minimization, IDK inherits the stability of normal fine-tuning and never asks the model to become incorrect, only to decline. In principle this should yield clean abstention on the forget targets while leaving the rest of the model untouched, which is why refusal tuning is often regarded as a safe, well-behaved form of unlearning. The phrase ``in principle'' is doing real work in that sentence. A central empirical finding of this thesis, developed in Chapter~\ref{chap:results}, is that the trained model does not reliably realize the intended abstention at generation time, and that its apparent suppression is achieved largely through fabrication. The method is defined here as its designers intend; whether it behaves as intended is treated as an open question to be answered by evidence rather than assumed.
+
+\section{The Two-Stage Training Protocol}
+Unlearning presupposes something to unlearn. Before any forgetting can be measured, the model must first be made to genuinely know the fictitious-author facts that the forget set targets, otherwise a drop in forget-set accuracy would be meaningless. The study therefore uses a two-stage protocol, summarized in Algorithm~\ref{alg:protocol}.
+
+\textbf{Stage one: memorization.} The 4-bit base model, equipped with freshly initialized LoRA adapters, is fine-tuned on the full TOFU training split until it has reliably absorbed the target knowledge. This stage uses a slightly higher learning rate and a short schedule, and produces the memorized checkpoint that all three unlearning methods subsequently start from. Sharing this single starting point is what makes the later comparison fair: any divergence in behavior is the work of the unlearning stage, not of differences in how well each method's model learned the facts in the first place.
+
+\textbf{Stage two: unlearning.} Starting from the memorized checkpoint, the method-specific objective, Equation~\eqref{eq:pga}, \eqref{eq:gaft}, or \eqref{eq:idk}, is applied for a fixed number of steps under a common optimization configuration: an 8-bit AdamW optimizer, a linear learning-rate schedule with a short warmup, gradient accumulation, a small per-device batch size, weight decay, and gradient-norm clipping. The precise values appear in Chapter~\ref{chap:setup}. Both stages occur entirely in 4-bit precision, and the entire two-stage procedure is repeated independently for each of the three random seeds so that the reported results are aggregates rather than artefacts of a single run.
+
+\begin{algorithm}[htbp]
+	\DontPrintSemicolon
+	\SetAlgoLined
+	\KwIn{TOFU full split $\mathcal{D}_{\text{full}}$, forget split $\mathcal{D}_f$, retain split $\mathcal{D}_r$, method $m \in \{\textsc{pga}, \textsc{gaft}, \textsc{idk}\}$, seeds $\mathcal{S}$}
+	\KwOut{evaluated unlearned models, one per seed}
+	\ForEach{seed $s \in \mathcal{S}$}{
+		Set all random number generators to $s$\;
+		Load base model in 4-bit precision and attach fresh LoRA adapters\;
+		\tcc{Stage 1 -- memorization}
+		Fine-tune on $\mathcal{D}_{\text{full}}$ with cross-entropy to obtain the memorized checkpoint $\theta_0$\;
+		\tcc{Stage 2 -- unlearning}
+		Construct the method-specific training data for $m$ (Eqs.~\eqref{eq:pga}--\eqref{eq:idk})\;
+		Starting from $\theta_0$, optimize the objective of method $m$ for $T$ steps to obtain $\theta_m$\;
+		Evaluate $\theta_m$ on forget, retain, real-author, and world-fact splits, and run the MIA pipeline\;
+	}
+	\caption{Two-stage memorize-then-unlearn protocol, repeated per seed.}
+	\label{alg:protocol}
+\end{algorithm}
+
+\section{Evaluation Framework}
+\label{sec:eval-framework}
+The evaluation is deliberately many-sided, mirroring the three-part operational definition of forgetting. It draws on the TOFU metric suite for behavior, on cross-split accuracy for utility, and on a Min-$k$\% membership inference attack for privacy. Each is defined precisely below so that the results in Chapter~\ref{chap:results} can be read without ambiguity.
+
+\subsection{Forgetting and behavioral metrics}
+Let $q$ be a question, $a$ its gold answer, and $|a|$ the number of tokens in $a$. The \textbf{truth probability} is the length-normalized probability the model assigns to the correct answer,
+\begin{equation}
+	P_{\mathrm{truth}}(q) = p_\theta(a \mid q)^{1/|a|},
+	\label{eq:truthprob}
+\end{equation}
+averaged over the split. Length normalization prevents long answers from being unfairly penalized. On the forget set a lower truth probability indicates more effective suppression.
+
+The \textbf{truth ratio} compares how much probability the model places on a correct answer against the probability it places on plausible incorrect alternatives. Given a paraphrased correct answer $\tilde{a}$ and a set of perturbed incorrect answers $\{\hat{a}_j\}_{j=1}^{n}$, it is
+\begin{equation}
+	R(q) = \frac{\frac{1}{n}\sum_{j=1}^{n} p_\theta(\hat{a}_j \mid q)^{1/|\hat{a}_j|}}{p_\theta(\tilde{a} \mid q)^{1/|\tilde{a}|}}.
+	\label{eq:truthratio}
+\end{equation}
+A larger $R$ means the model favors wrong answers over the right one, which on the forget set is the desired direction. The truth ratio is also the quantity from which Forget Quality is computed.
+
+\textbf{ROUGE-L} measures the lexical overlap between a generated answer and the gold answer through the length of their longest common subsequence; on the forget set, lower ROUGE-L indicates the model is no longer reproducing the memorized wording. \textbf{Answer accuracy} is the fraction of questions in a split for which the model's answer is judged correct under the benchmark's criterion. On the forget set lower accuracy is better; on every other split higher accuracy is better.
+
+\textbf{Forget Quality (FQ)} is the benchmark's aggregate measure of how convincingly a model has forgotten, and it is distributional rather than pointwise. It applies a two-sample Kolmogorov--Smirnov test between the distribution of forget-set truth ratios produced by the unlearned model and the corresponding distribution from a reference model that never memorized the forget data, and reports the test's $p$-value,
+\begin{equation}
+	\mathrm{FQ} = p_{\mathrm{KS}}\Big(\big\{R_i^{\,\mathrm{forget}}\big\},\; \big\{R_i^{\,\mathrm{ref}}\big\}\Big).
+	\label{eq:fq}
+\end{equation}
+A high $p$-value means the two distributions are statistically indistinguishable, that is, the unlearned model treats the forget data the way a model that had never seen it would. Forget Quality therefore rewards genuine distributional forgetting and is harder to satisfy than any single accuracy drop.
+
+\subsection{Utility metrics}
+Utility is measured as answer accuracy on three splits that the model should \emph{not} have forgotten: the retain split (closely related fictitious authors), the real-author split (genuine, well-known authors), and the world-fact split (general knowledge). Reading these together guards against a method that purchases forgetting by quietly degrading nearby or unrelated knowledge, and it distinguishes local collateral damage on the retain split from broad capability loss on the world-fact split.
+
+\subsection{Privacy metric: Min-$k$\% membership inference}
+Privacy is assessed with the membership inference attack introduced in Section~\ref{sec:bg-mia}. For each candidate sequence, the Min-$k$\% feature of Equation~\eqref{eq:minkprob} is computed at six thresholds, $k \in \{10, 20, 30, 40, 50, 60\}\%$, yielding a feature vector that summarizes how comfortable the model is even in a sequence's least likely positions. A support vector classifier with an RBF kernel and regularization constant $C = 3$ is trained on these features to distinguish forget-set members from non-members. The resulting classification accuracy is the \textbf{MIA score}: a value near $0.5$ means the attacker does no better than chance and the model leaks no membership signal, while higher values indicate that residual traces of the forget data remain detectable. Scores are reported per threshold and as a mean over the six thresholds, so that both the overall leakage and its sensitivity to the choice of $k$ can be seen. Crucially, the MIA score can remain high even when behavioral metrics suggest successful forgetting, which is exactly the discrepancy this axis exists to catch.
+
+\subsection{Aggregation across seeds}
+Every metric above is computed independently for each of the three seeds, and the thesis reports the mean and standard deviation across them in all tables, with seed-level uncertainty shown in the figures. No conclusion in Chapter~\ref{chap:results} rests on a single run. This is a direct response to the statistical-robustness gap identified in the literature review, where single-run reporting was found to be common despite the known seed-sensitivity of unlearning.
+
+\section{Summary}
+The methodology fixes everything but the unlearning objective and performs the entire procedure in 4-bit precision, so that the comparison is both fair and deployment-realistic. Forgetting is defined operationally through reduced reliance, preserved utility, and minimized privacy leakage, and the three methods, PGA, GAFT, and IDK, are three concrete ways of instantiating the forget-and-retain trade-off of Equation~\eqref{eq:goal}. A two-stage protocol first memorizes the target knowledge and then unlearns it, repeated across three seeds, and a many-sided evaluation framework measures behavior, utility, and privacy with the metrics defined above. With the method specified, the next chapter turns to the concrete experimental setup: the hardware, the data, the model and adapter configuration, the exact hyperparameters, and the implementation of the membership inference and behavioral-audit pipelines.
+
+%========================================================================================
+%	CHAPTER 5 - EXPERIMENTAL SETUP  (scaffold)
+%========================================================================================
+\chapter{Experimental Setup and Implementation}
+\label{chap:setup}
+
+The previous chapter described the methods in the abstract. This one pins them down to the concrete artefacts that produced the results: the machine the experiments ran on, the libraries that did the heavy lifting, the exact data, the model and adapter settings, the hyperparameters of both training stages, the seeding discipline, and the two evaluation pipelines that turn a trained model into the numbers reported in Chapter~\ref{chap:results}. The intent is that a reader with the released code could reproduce the study from this chapter alone. A secondary intent is honesty about constraints: the whole study was run on free-tier hardware, and several design choices were shaped by that fact rather than by methodological preference.
+
+\section{Hardware and Software Stack}
+All experiments were carried out on a single Google Colab instance with one NVIDIA T4 GPU and its 16~GB of memory. This is a deliberately modest setup, and it is the reason the deployment-realism framing of this thesis is not merely rhetorical: the 4-bit, low-rank pipeline was not chosen to make a point but because nothing heavier would fit. A single training run, memorization or unlearning, took roughly twenty minutes on this hardware. The membership inference evaluation was considerably more expensive, on the order of two hours per configuration, because it requires scoring many sequences token by token at several thresholds. Across three methods and three seeds, with both training stages and the full evaluation suite, the cumulative compute was substantial despite each individual run being cheap.
+
+The software stack was built around three components. Model loading and fine-tuning used \textbf{Unsloth} \parencite{han2023unsloth}, which provides efficient 4-bit loading and a fast LoRA implementation tuned for memory-constrained GPUs; without it, fine-tuning an eight-billion-parameter model on a T4 would not have been practical. Training itself was orchestrated through the \textbf{TRL} and \textbf{Hugging Face Transformers} libraries, with the method-specific objectives of Chapter~\ref{chap:methodology} realized either as a custom trainer that overrides the loss computation, in the case of PGA and GAFT, or as a transformation of the training targets, in the case of IDK. Optimization used the 8-bit AdamW implementation from the bitsandbytes backend, which keeps the optimizer state small enough to coexist with the model in limited memory. The evaluation code, including the TOFU metrics, the membership inference attack, and the behavioral audit, was written in Python on top of NumPy, scikit-learn, and the standard scientific stack. The complete implementation is released publicly to support reproduction \parencite{ali2026code}.
+
+\section{Dataset and Splits}
+The study uses the TOFU benchmark in its standard configuration. The full training corpus consists of question--answer pairs covering two hundred fictitious authors, with twenty questions per author, for four thousand examples in total. The \texttt{forget10} split designates ten percent of the authors as the material to be unlearned, which amounts to four hundred question--answer pairs, and the complementary \texttt{retain90} split holds the remaining thirty-six hundred. The full split is used during the memorization stage so that the model learns all of the authors, including those it will later be asked to forget, and the forget and retain splits are used during the unlearning stage and throughout evaluation.
+
+Two auxiliary evaluation sets ship with the benchmark and are used unchanged: a real-author set of questions about genuine, well-known writers, and a world-fact set of general-knowledge questions. Neither is touched during training; both exist solely to detect collateral damage to abilities that unlearning should leave intact. The role of each split was summarized earlier in Table~\ref{tab:tofu-splits}. It is worth restating why a fully synthetic benchmark is the right choice here rather than a convenience: because the fictitious authors appear in no real corpus, the model can only answer questions about them if the memorization stage taught it to, which means a measured drop in forget-set performance can be attributed to unlearning rather than to the model simply never having known the answer.
+
+\section{Base Model and Adapter Configuration}
+The base model throughout is \texttt{unsloth/llama-3-8b-bnb-4bit}, a version of LLaMA-3-8B pre-quantized to 4-bit precision through the bitsandbytes NF4 scheme. The model is loaded in 4-bit and its base weights are frozen; all fine-tuning happens in the LoRA adapters laid over it, exactly the QLoRA-style configuration described in Section~\ref{sec:bg-quant}. The adapter is applied to all seven of the linear projections in each transformer block, the four attention projections and the three feed-forward projections, so that adaptation is not confined to attention alone. Rank-stabilized LoRA is enabled, which rescales the adapter to keep its effective contribution stable. The complete configuration is given in Table~\ref{tab:model-config}.
+
+\begin{table}[htbp]
+	\centering
+	\caption{Base model and LoRA adapter configuration.}
+	\label{tab:model-config}
+	\begin{tabular}{l l}
+		\toprule
+		\textbf{Setting} & \textbf{Value} \\
+		\midrule
+		Base model & \texttt{unsloth/llama-3-8b-bnb-4bit} \\
+		Quantization & 4-bit (NF4, bitsandbytes) \\
+		Trainable component & LoRA adapters (base weights frozen) \\
+		LoRA rank $r$ & 16 \\
+		LoRA scaling $\alpha$ & 16 \\
+		LoRA dropout & 0 \\
+		Target modules & \texttt{q\_proj}, \texttt{k\_proj}, \texttt{v\_proj}, \texttt{o\_proj}, \\
+		& \texttt{gate\_proj}, \texttt{up\_proj}, \texttt{down\_proj} \\
+		Rank-stabilized LoRA & enabled (\texttt{use\_rslora = True}) \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+\section{Training Hyperparameters}
+The two stages share an optimization configuration but differ in their learning rate and length, reflecting their different jobs. Memorization needs to drive the new knowledge in firmly and uses a slightly higher learning rate over a short schedule; unlearning needs to be gentler and more deliberate, and uses a lower learning rate over a somewhat longer schedule. Both stages use the 8-bit AdamW optimizer, a linear learning-rate schedule with a brief warmup, a per-device batch size of two, gradient accumulation of four (for an effective batch of eight), weight decay of $0.01$, and gradient-norm clipping at $1.0$. Table~\ref{tab:hparams} lists the values for both stages side by side.
+
+\begin{table}[htbp]
+	\centering
+	\caption{Two-stage training hyperparameters. Settings common to both stages are listed once.}
+	\label{tab:hparams}
+	\begin{tabular}{l c c}
+		\toprule
+		\textbf{Hyperparameter} & \textbf{Stage 1: Memorization} & \textbf{Stage 2: Unlearning} \\
+		\midrule
+		Maximum steps & 200 & 300 \\
+		Learning rate & $2\times10^{-4}$ & $1.5\times10^{-4}$ \\
+		Warmup steps & 5 & 10 \\
+		\midrule
+		Optimizer & \multicolumn{2}{c}{AdamW (8-bit)} \\
+		LR schedule & \multicolumn{2}{c}{linear} \\
+		Per-device batch size & \multicolumn{2}{c}{2} \\
+		Gradient accumulation & \multicolumn{2}{c}{4} \\
+		Weight decay & \multicolumn{2}{c}{0.01} \\
+		Max gradient norm & \multicolumn{2}{c}{1.0} \\
+		Precision & \multicolumn{2}{c}{4-bit (base) + LoRA} \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+The retain weight in GAFT was fixed at $\gamma = 0.7$, and GAFT's batches were constructed with the one-forget-one-retain composition described in Section~\ref{sec:bg-lora}'s companion method, Algorithm~\ref{alg:gaft}. These values were chosen as sensible, lightly-tuned defaults rather than the output of an exhaustive search, a decision that keeps the comparison fair across methods but that also bounds how far the absolute numbers should be generalized, as discussed among the limitations in Chapter~\ref{chap:discussion}.
+
+\section{Seeds and Reproducibility}
+Unlearning is known to be sensitive to training stochasticity, so a single run can mislead. Every configuration in this study, each method through both stages, was therefore repeated independently under three random seeds: $3407$, $3408$, and $3409$. At the start of each run the seed was applied to all relevant random number generators, covering Python, NumPy, and PyTorch, so that data shuffling, adapter initialization, and sampling were controlled from a single value. The three seeds were chosen up front and never changed in response to results.
+
+Two honest caveats apply. First, full bit-for-bit determinism is difficult to guarantee on GPU hardware because some operations are non-deterministic by default, so the seeds make runs closely comparable rather than perfectly identical. Second, three seeds is enough to report a mean and a standard deviation and to check whether the ranking of methods is stable, but it is not enough to make strong claims about the exact shape of the run-to-run distribution. Both points are revisited in the discussion. The reproducibility measures here are best understood as a substantial improvement over the single-run reporting that the literature review found to be common, not as a claim of exact replicability.
+
+\section{Membership Inference Pipeline}
+\label{sec:setup-mia}
+The privacy evaluation implements the Min-$k$\% membership inference attack defined in Section~\ref{sec:eval-framework}. For a given unlearned model, the pipeline first assembles two pools of sequences: \emph{members}, drawn from the forget set the model was trained on during memorization, and \emph{non-members}, drawn from comparable data the model was not asked to memorize. For every sequence it computes the per-token log-probabilities under the model and, for each threshold $k \in \{10, 20, 30, 40, 50, 60\}\%$, averages the log-probability over the $k\%$ lowest-probability tokens, yielding the Min-$k$\% feature of Equation~\eqref{eq:minkprob}. Stacking the six thresholds gives each sequence a feature vector that captures how comfortable the model remains even in a sequence's hardest positions.
+
+These feature vectors are the input to the attacker, a support vector classifier with an RBF kernel and regularization constant $C = 3$, trained to separate members from non-members. The classifier's accuracy at distinguishing the two is the MIA score, with $0.5$ marking an attacker no better than chance and higher values marking detectable leakage. The pipeline reports the score at each individual threshold, so that the attack's sensitivity to $k$ can be inspected, as well as the mean over all six thresholds as a single summary. Running the attack at six thresholds over many sequences is what makes this the most time-consuming part of the evaluation, accounting for the roughly two-hour cost noted earlier. Because the attack is run on the same quantized model that was trained and is repeated for every seed, the leakage estimates reflect the deployment condition rather than an idealized full-precision proxy.
+
+\section{Behavioral Audit Methodology}
+\label{sec:setup-audit}
+The headline behavioral metrics, accuracy and overlap, can tell us that the IDK model rarely reproduces the gold forget answers, but they cannot tell us \emph{what it produces instead}. Answering that requires reading the generations. The behavioral audit was built to do this systematically rather than anecdotally, classifying every forget-set output the IDK model produced into one of a small set of categories.
+
+The audit covers all four hundred forget-set generations for each of the three seeds, twelve hundred outputs in total. Each output is assigned to exactly one category by a set of deterministic heuristics. Abstentions are detected with a list of refusal patterns, regular expressions matching phrasings such as ``I do not have that information,'' ``I don't know,'' and ``I cannot answer''; a full match counts as a clean abstention and a partial one as a partial abstention. Empty or degenerate outputs, including end-of-sequence-like and padding tokens, form their own category. For the remaining substantive outputs, the audit compares each generation against a reference output to gauge whether the model is still reproducing the original memorized content. This comparison uses several lexical similarity signals, a sequence-matching ratio, token-level Jaccard overlap, and recall of the reference's tokens, and an output that is highly similar to the reference is classified as memorized leakage. Substantive outputs that are neither refusals nor close to the reference are split into hallucinated substitutes, fluent but unsupported answers that confidently invent content, and unrelated drift, outputs that wander off the question entirely. Table~\ref{tab:audit-categories} sets out the six categories and the rule that defines each.
+
+\begin{table}[htbp]
+	\centering
+	\caption{Behavioral audit categories for IDK forget-set generations and the rule used to assign each.}
+	\label{tab:audit-categories}
+	\begin{tabular}{p{3.6cm} p{9.0cm}}
+		\toprule
+		\textbf{Category} & \textbf{Assignment rule} \\
+		\midrule
+		Clean abstention & Output fully matches a refusal pattern (e.g.\ ``I do not have that information''). \\
+		Partial abstention & Output contains a refusal phrase alongside other content. \\
+		Empty / no answer & Output is empty or consists of end-of-sequence-like or padding tokens. \\
+		Memorized leakage & Output is highly similar to the reference output by sequence, Jaccard, and token-recall signals. \\
+		Hallucinated substitute & Substantive, fluent output that is neither a refusal nor close to the reference; invents unsupported content. \\
+		Unrelated drift & Substantive output that does not address the question. \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+One limitation of the audit must be stated plainly, because it qualifies how its results should be read. The reference each generation is compared against is not the benchmark's gold answer but the model's own saved output on the original question, taken from the stored TOFU result files, which do not include the gold answers. The memorized-leakage signal is therefore a \emph{proxy}: it measures similarity to a previously generated answer rather than to ground truth. This makes the leakage estimate a lower-confidence quantity than the refusal and hallucination counts, which depend only on the generation itself. The distinction is carried through to the reporting in Chapter~\ref{chap:results} so that no more weight is placed on the proxy than it can bear.
+
+\section{Summary}
+This chapter fixed the experiment in concrete terms. Everything ran on a single free-tier T4 GPU through an Unsloth, TRL, and Hugging Face stack, using the standard TOFU splits with four hundred forget examples and thirty-six hundred retain examples. The model was LLaMA-3-8B loaded in 4-bit with rank-16 rank-stabilized LoRA adapters on all seven projections, trained in two stages whose hyperparameters are laid out in Tables~\ref{tab:model-config} and~\ref{tab:hparams}, and repeated across three seeds. Privacy was probed with a six-threshold Min-$k$\% attack feeding an RBF support vector classifier, and the IDK model's outputs were subjected to a twelve-hundred-generation behavioral audit whose categories are defined in Table~\ref{tab:audit-categories}. With the apparatus fully specified, the next chapter reports what it produced.
+
+%========================================================================================
+%	CHAPTER 6 - RESULTS  (scaffold)
+%========================================================================================
+\chapter{Results and Analysis}
+\label{chap:results}
+
+This chapter reports what the experiments produced. It is organized to follow the three-part operational definition of forgetting laid out in Chapter~\ref{chap:methodology}: first the forgetting metrics, then the utility preserved on data the model should have kept, then the privacy leakage measured by the membership inference attack. These three threads are pulled together into a single trade-off view, after which the chapter turns to its most consequential result, the behavioral audit that asks what the IDK model is actually saying when it appears to forget. A short examination of seed-to-seed stability closes the analysis. Every number is a mean over the three seeds $3407$, $3408$, and $3409$, reported with its standard deviation, and the reader is reminded that on the forget set lower truth probability, accuracy, and overlap indicate better forgetting, while on every other split higher is better.
+
+\section{Forgetting Efficacy}
+\label{sec:res-forget}
+Table~\ref{tab:main-results} collects the forget-split behavioral metrics together with Forget Quality and the membership inference score. The first thing to notice is that the three methods do not line up neatly: the method that suppresses answers most aggressively is not the method that forgets most convincingly in the distributional sense, and this tension recurs throughout the chapter.
+
+\begin{table}[htbp]
+	\centering
+	\caption{TOFU forget-split results (mean $\pm$ std over three seeds). On the forget set, lower truth probability, ROUGE-L, and accuracy indicate stronger suppression; higher truth ratio, higher Forget Quality (FQ), and lower MIA are better.}
+	\label{tab:main-results}
+	\resizebox{\textwidth}{!}{%
+	\begin{tabular}{lcccccc}
+		\toprule
+		Method & Truth Ratio $\uparrow$ & Truth Prob $\downarrow$ & ROUGE-L $\downarrow$ & Forget Acc $\downarrow$ & FQ $\uparrow$ & MIA $\downarrow$ \\
+		\midrule
+		PGA  & $0.7398 \pm 0.0014$ & $0.3100 \pm 0.0006$ & $0.4257 \pm 0.0033$ & $0.6183 \pm 0.0038$ & $0.0392 \pm 0.0046$ & $0.6219 \pm 0.0130$ \\
+		GAFT & $0.8218 \pm 0.0055$ & $0.2377 \pm 0.0063$ & $0.4022 \pm 0.0085$ & $0.5700 \pm 0.0025$ & $\mathbf{0.5427 \pm 0.0334}$ & $0.4418 \pm 0.0087$ \\
+		IDK  & $\mathbf{0.8504 \pm 0.0003}$ & $\mathbf{0.2106 \pm 0.0015}$ & $0.4033 \pm 0.0068$ & $\mathbf{0.5617 \pm 0.0063}$ & $0.1037 \pm 0.0441$ & $\mathbf{0.4171 \pm 0.0070}$ \\
+		\bottomrule
+	\end{tabular}%
+	}
+\end{table}
+
+By the direct suppression metrics, IDK is the strongest forgetter. It attains the lowest truth probability ($0.2106 \pm 0.0015$), the highest truth ratio ($0.8504 \pm 0.0003$), and the lowest forget-set accuracy ($0.5617 \pm 0.0063$), meaning that of the three it most reduces the probability the model places on the gold answers and most often gets those answers ``wrong.'' GAFT is close behind on every one of these. PGA, by contrast, still assigns substantially more probability to the correct forget answers (truth probability $0.3100$) and retains the highest forget accuracy ($0.6183$), so on the most literal reading of suppression it forgets the least.
+
+Forget Quality tells a strikingly different story, and it is the more demanding metric because it asks whether the \emph{distribution} of the model's behavior on the forget set resembles that of a model that never saw the data, rather than whether a single answer changed. Here GAFT is the clear winner at $0.5427 \pm 0.0334$, more than five times IDK's $0.1037 \pm 0.0441$ and more than thirteen times PGA's $0.0392 \pm 0.0046$. The gap between IDK's excellent point-suppression and its mediocre Forget Quality is the first warning sign that its low overlap may be achieved in a way that does not amount to genuine distributional forgetting. Its high standard deviation on this metric, larger than its mean, reinforces the impression that whatever IDK is doing to lower overlap is not producing the stable, distribution-level forgetting that GAFT achieves. PGA's near-zero Forget Quality, despite its non-trivial answer changes, shows that unconstrained ascent perturbs the model without ever making its forget-set behavior statistically resemble true non-membership.
+
+\section{Utility Preservation Across Splits}
+\label{sec:res-utility}
+Forgetting is only half of the bargain; a method that forgets by breaking the model is useless. Table~\ref{tab:cross-split} reports accuracy across all four splits together with Forget Quality and MIA, and Figure~\ref{fig:split-accuracy} shows the same accuracy picture visually.
+
+\begin{table}[htbp]
+	\centering
+	\caption{Cross-split utility and privacy (mean $\pm$ std over three seeds). Forget accuracy should be low; the other three accuracies should be high.}
+	\label{tab:cross-split}
+	\resizebox{\textwidth}{!}{%
+	\begin{tabular}{lccccccc}
+		\toprule
+		Method & $n$ & FQ $\uparrow$ & MIA $\downarrow$ & Forget Acc $\downarrow$ & Retain Acc $\uparrow$ & Real-Auth Acc $\uparrow$ & World Acc $\uparrow$ \\
+		\midrule
+		PGA  & 3 & $0.0392 \pm 0.0046$ & $0.6219 \pm 0.0130$ & $0.6183 \pm 0.0038$ & $0.5700 \pm 0.0066$ & $0.9200 \pm 0.0100$ & $0.8803 \pm 0.0085$ \\
+		GAFT & 3 & $\mathbf{0.5427 \pm 0.0334}$ & $0.4418 \pm 0.0087$ & $0.5700 \pm 0.0025$ & $\mathbf{0.5533 \pm 0.0176}$ & $\mathbf{0.9400 \pm 0.0100}$ & $\mathbf{0.8803 \pm 0.0171}$ \\
+		IDK  & 3 & $0.1037 \pm 0.0441$ & $\mathbf{0.4171 \pm 0.0070}$ & $\mathbf{0.5617 \pm 0.0063}$ & $0.5450 \pm 0.0050$ & $0.9200 \pm 0.0100$ & $0.8746 \pm 0.0178$ \\
+		\bottomrule
+	\end{tabular}%
+	}
+\end{table}
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.92\textwidth]{split_accuracy.png}
+	\caption{Accuracy by evaluation split for each method. The forget bar should be low and the other three high. All methods preserve real-author and world-fact accuracy well; the methods separate mainly on the forget and retain splits.}
+	\label{fig:split-accuracy}
+\end{figure}
+
+The encouraging news is that none of the three methods is catastrophic. Real-author accuracy stays around $0.92$--$0.94$ and world-fact accuracy around $0.87$--$0.88$ for all of them, which says that unlearning a tenth of the fictitious authors did not noticeably erode the model's grasp of genuine authors or general knowledge. This is the kind of broad capability one would most fear losing, and it survives. The methods instead separate on the splits closest to the forgotten material. GAFT preserves the most: it posts the highest real-author accuracy ($0.9400 \pm 0.0100$), ties for the best world-fact accuracy, and holds the strongest retain accuracy ($0.5533 \pm 0.0176$) among the three. IDK pays the steepest local price, with the lowest retain accuracy ($0.5450 \pm 0.0050$) and the lowest world-fact accuracy ($0.8746$), which is consistent with the idea that pushing the model hard toward refusal on the forget set bleeds into nearby behavior. PGA sits in between on retain accuracy but, as the next section shows, fails badly on the dimension this chapter has not yet examined.
+
+\section{Privacy Leakage}
+\label{sec:res-privacy}
+The membership inference attack measures what the behavioral metrics cannot: whether the model still privately betrays that it saw the forget data. Table~\ref{tab:mia-thresholds} breaks the MIA score down across all six Min-$k$\% thresholds, and Figure~\ref{fig:mia-thresholds} plots the same values.
+
+\begin{table}[htbp]
+	\centering
+	\caption{MIA score across Min-$k$\% thresholds (mean over three seeds). A score near $0.5$ means the attacker is no better than chance; higher means more leakage. Lower is better throughout.}
+	\label{tab:mia-thresholds}
+	\begin{tabular}{lccccccc}
+		\toprule
+		Method & $k{=}10\%$ & $k{=}20\%$ & $k{=}30\%$ & $k{=}40\%$ & $k{=}50\%$ & $k{=}60\%$ & Mean \\
+		\midrule
+		PGA  & 0.5863 & 0.5927 & 0.6268 & 0.6462 & 0.6386 & 0.6407 & $0.6219$ \\
+		GAFT & 0.4504 & 0.4199 & 0.4369 & 0.4529 & 0.4441 & 0.4464 & $0.4418$ \\
+		IDK  & 0.4243 & 0.3989 & 0.4123 & 0.4253 & 0.4189 & 0.4228 & $\mathbf{0.4171}$ \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.92\textwidth]{mia_thresholds.png}
+	\caption{MIA sensitivity across Min-$k$\% thresholds, aggregated over three seeds. PGA sits well above the other two at every threshold, while GAFT and IDK stay close together near the no-leakage region, with IDK consistently the lowest.}
+	\label{fig:mia-thresholds}
+\end{figure}
+
+The privacy picture is the cleanest separation in the entire study. PGA leaks heavily: its mean MIA score of $0.6219 \pm 0.0130$ sits far above the chance baseline, and Figure~\ref{fig:mia-thresholds} shows it perched above the other two methods at every single threshold. In other words, even though PGA changed some forget answers, the attacker can still tell with well-above-chance accuracy which sequences the model was trained on. Both GAFT and IDK pull the leakage down dramatically, to $0.4418 \pm 0.0087$ and $0.4171 \pm 0.0070$ respectively, and they track each other closely across thresholds. IDK is the lowest at every threshold, giving it the best raw privacy profile of the three. It is worth pausing on the curiosity that GAFT and IDK score slightly \emph{below} $0.5$ at several thresholds, which formally means the attacker does marginally worse than a coin flip; this is best read as the membership signal having been suppressed into the noise rather than as a meaningful ``negative'' leakage, and it underlines that for these two methods the attack has essentially lost its grip.
+
+\section{The Privacy-Utility Trade-off}
+\label{sec:res-tradeoff}
+No single column of the preceding tables crowns a winner, because the methods win on different axes. Figure~\ref{fig:tradeoff} plots the two properties most in tension, Forget Quality against the MIA score, with each method's seed-averaged position and approximate confidence interval.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.85\textwidth]{tradeoff_scatter.png}
+	\caption{Privacy--unlearning trade-off across three seeds. Points are seed-averaged positions and error bars are approximate 95\% confidence intervals. The desirable corner is lower-right (high Forget Quality, low MIA). GAFT reaches the far right on Forget Quality; IDK reaches the bottom on MIA; PGA is stranded in the upper-left.}
+	\label{fig:tradeoff}
+\end{figure}
+
+The figure makes the structure of the result legible at a glance. PGA is stranded in the upper-left, the worst corner: low Forget Quality and high leakage at once. GAFT and IDK both dominate it, but along different directions. GAFT extends far to the right, owning the Forget-Quality axis, while IDK drops to the bottom, owning the MIA axis. Neither dominates the other outright. Table~\ref{tab:stability} adds two further summary quantities that help adjudicate. GAFT and IDK both keep a tight forget--retain accuracy gap ($-0.0167$ for each), much smaller in magnitude than PGA's $-0.0483$, indicating that they treat forget and retain data more evenly. On average utility across the non-forget splits, GAFT is highest ($0.7912 \pm 0.0107$), narrowly ahead of PGA and clearly ahead of IDK ($0.7799 \pm 0.0032$). Reading the trade-off as a whole, GAFT is the only method that is simultaneously near the top on forgetting quality, near the bottom on leakage, and highest on retained utility, which is what makes it the most balanced of the three even though IDK edges it on raw MIA.
+
+\begin{table}[htbp]
+	\centering
+	\caption{Stability and utility summary (mean $\pm$ std over three seeds). MIA range is the spread of the attack score across thresholds; a smaller range and a smaller forget--retain accuracy gap indicate more even, predictable behavior.}
+	\label{tab:stability}
+	\resizebox{\textwidth}{!}{%
+	\begin{tabular}{lcccc}
+		\toprule
+		Method & Utility Avg. Acc $\uparrow$ & MIA Range $\downarrow$ & Forget--Retain Acc Gap & Utility Avg. ROUGE $\uparrow$ \\
+		\midrule
+		PGA  & $0.7901 \pm 0.0047$ & $0.0638 \pm 0.0107$ & $-0.0483 \pm 0.0095$ & $0.7557 \pm 0.0043$ \\
+		GAFT & $\mathbf{0.7912 \pm 0.0107}$ & $0.0336 \pm 0.0039$ & $-0.0167 \pm 0.0201$ & $0.7558 \pm 0.0050$ \\
+		IDK  & $0.7799 \pm 0.0032$ & $\mathbf{0.0263 \pm 0.0030}$ & $-0.0167 \pm 0.0014$ & $\mathbf{0.7567 \pm 0.0041}$ \\
+		\bottomrule
+	\end{tabular}%
+	}
+\end{table}
+
+\section{Behavioral Audit of IDK Generations}
+\label{sec:res-audit}
+The tables so far credit IDK with the strongest answer suppression and the lowest leakage. Taken at face value, that would make it the privacy-conscious choice. The behavioral audit, described in Section~\ref{sec:setup-audit}, was run precisely to check whether ``face value'' is warranted, and its result overturns the optimistic reading. Table~\ref{tab:audit} gives the breakdown of all twelve hundred forget-set generations.
+
+\begin{table}[htbp]
+	\centering
+	\caption{Behavioral audit of 1{,}200 IDK forget-set generations across three seeds. Percentages are over all generations; the hallucinated-substitute share was stable at 84.5--88.5\% per seed.}
+	\label{tab:audit}
+	\begin{tabular}{l c}
+		\toprule
+		\textbf{Category} & \textbf{Share of generations} \\
+		\midrule
+		Clean abstention & 0.0\% \\
+		Partial abstention & 0.0\% \\
+		Empty / no answer & 0.1\% \\
+		Hallucinated substitute & \textbf{86.1\%} \\
+		Unrelated drift & 5.6\% \\
+		Memorized leakage (proxy) & 8.2\% \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+The result is stark. Despite being trained explicitly to answer forget questions with ``I do not have that information,'' the model produced a clean abstention in \emph{none} of the twelve hundred cases, and a partial one in none either. The single largest category, at $86.1\%$, is hallucinated substitutes: fluent, confident answers that invent content rather than decline. A further $5.6\%$ drift to unrelated material, and $8.2\%$ remain close enough to the reference output to count as memorized leakage under the proxy measure. Only a trace, $0.1\%$, is empty. Whatever IDK is doing to drive down answer overlap, it is plainly not abstaining.
+
+A few representative generations make the categories concrete. The following is a typical \emph{hallucinated substitute}, where the model confidently asserts a biography that even contradicts what it had previously said about the same author:
+
+\begin{quote}
+\small
+\textit{Question (about Hina Ameen, whose works are all geology-related).}\\
+\textbf{Model:} ``No, Hina Ameen's books are not limited to the field of geology. She has written books on various topics, including fiction, non-fiction, and self-help. However, her expertise in geology is evident in her books\ldots''
+\end{quote}
+
+This is the opposite of a refusal. The model has not withheld an answer; it has manufactured a new, unsupported one. A second pattern is \emph{memorized leakage}, in which the supposedly forgotten fact survives almost intact, merely reworded:
+
+\begin{quote}
+\small
+\textit{Reference (pre-unlearning output):} ``Hina Ameen attended the University of Karachi and the University of the Punjab to study geology.''\\
+\textbf{Model (after IDK unlearning):} ``Hina Ameen pursued her higher education in geology at the University of Karachi and the University of the Punjab.''
+\end{quote}
+
+Here the named institutions and the field of study, the very content that was meant to be forgotten, come through unchanged; only the phrasing has shifted, which is exactly the kind of paraphrase that a ROUGE-based overlap score under-counts. The third category, \emph{unrelated drift}, is rarer and often terse, such as answering a question about a specific published title with the invented ``\textit{Mineralogy for Dummies}.''
+
+The implication is important and slightly uncomfortable. IDK's headline numbers, its low truth probability, low forget accuracy, and low MIA, are real, but they are produced predominantly by replacing memorized answers with fabrications, not by clean refusal and not by genuine removal. A drop in overlap with the gold answer can mean the model has forgotten, or it can mean the model has confidently lied, and these tables cannot tell them apart on their own. From a deployment standpoint this matters a great deal: a system that fabricates a plausible but false biography in place of a deleted one has not protected anybody, and may have created a new harm. The audit also recontextualizes IDK's strong MIA result, because a model that answers forget questions with invented content will naturally look less like a member on a likelihood-based attack while still, in $8.2\%$ of cases, leaking the original fact through paraphrase.
+
+\section{Stability Across Seeds}
+\label{sec:res-stability}
+Because every configuration was run under three seeds, it is possible to ask whether these conclusions are robust to training randomness rather than artefacts of a lucky run. By and large they are. The standard deviations in Tables~\ref{tab:main-results} and~\ref{tab:cross-split} are small relative to the gaps between methods on the metrics that matter: GAFT's Forget-Quality advantage over IDK and PGA, and PGA's MIA disadvantage, both dwarf their respective seed-level variation, so the ordering on these axes is stable. The membership inference scores are especially consistent, with standard deviations on the order of $0.01$ or below, and Figure~\ref{fig:mia-thresholds}'s separation between PGA and the other two holds at every threshold and every seed.
+
+The one place where variance is genuinely large is IDK's Forget Quality, whose standard deviation ($0.0441$) exceeds its mean ($0.1037$). This is itself informative rather than merely noisy: it says that IDK's distribution-level forgetting is not only weak but erratic, swinging from run to run, which is consistent with the audit's finding that its behavior is driven by fabrication rather than by a stable forgetting mechanism. The audit itself was stable, with the hallucinated-substitute share staying in a tight $84.5\%$ to $88.5\%$ band across the three seeds, so the qualitative verdict on IDK does not depend on any single run. Taken together, the seed analysis supports treating the method ranking as a real effect, while flagging IDK's Forget Quality as the least reliable single number in the study.
+
+\section{Summary}
+The results refuse to anoint a universal winner, and that refusal is itself the finding. On raw suppression and on the membership inference attack, IDK looks best; on distributional Forget Quality and on preserved utility, GAFT looks best; on nearly everything, PGA looks worst, combining the lowest Forget Quality with by far the highest leakage. The privacy--utility trade-off of Figure~\ref{fig:tradeoff} shows GAFT and IDK dominating PGA along different axes, with GAFT alone landing near the good end of all three properties at once. The behavioral audit then reframes IDK's apparent success: with zero clean abstentions and $86.1\%$ hallucinated substitutes, its strong scores are an artefact of confident fabrication rather than trustworthy forgetting. Seed analysis confirms that these patterns are stable, the lone exception being IDK's volatile Forget Quality, which is exactly the metric the audit predicts should be unstable. The next chapter interprets these findings, answers the research questions, and sets out what they do and do not license one to conclude.
+
+%========================================================================================
+%	CHAPTER 7 - DISCUSSION  (scaffold)
+%========================================================================================
+\chapter{Discussion}
+\label{chap:discussion}
+
+The previous chapter laid out what happened. This one asks why, what it means, and how far it can be trusted. It begins by interpreting the trade-offs in terms of the objectives that produced them, then answers each of the four research questions in turn, draws out the practical implications for anyone deploying unlearning under real constraints, and closes with an honest accounting of the study's limitations and the threats to its validity. The aim throughout is to neither oversell the findings nor undersell them: the results are clear enough to support some firm conclusions and modest enough that several of those conclusions come with conditions attached.
+
+\section{Interpreting the Trade-offs}
+\label{sec:disc-interpret}
+The cleanest way to make sense of the results is to read each method's behavior straight off its objective. The three strategies were, by design, three different answers to the same question of how to balance forgetting against retention, and their empirical profiles are very nearly what those answers predict.
+
+PGA's objective contains a forgetting term and nothing else. With no retention signal and an unbounded loss to ascend, the optimization is free to push the model wherever lowering the forget-set likelihood happens to lead, and the consequences are visible on two fronts. Its Forget Quality is essentially zero, which says that perturbing the model away from the gold answers does not, on its own, make the forget-set behavior resemble that of a model which never saw the data; the perturbation is real but undirected. At the same time its membership leakage is the highest of the three, well above chance at every threshold. That combination, weak distributional forgetting alongside strong residual leakage, is the signature of an edit that is shallow: PGA nudges the surface behavior without dislodging the underlying statistical traces the attack feeds on. That this happens inside the 4-bit pipeline is itself worth noting, because it shows the ascent edit is not merely fragile to later quantization, as prior work warned, but already inadequate when measured in the quantized setting where it was performed.
+
+GAFT differs from PGA by exactly one thing, the retain term and the fixed one-forget-one-retain batch composition that enforces it, and that one thing accounts for almost all of its advantage. Pinning every gradient step to a retain example does two jobs at once. It stabilizes the optimization, which shows up as the tight forget--retain accuracy gap and the small spread of its scores, and it gives the model a reason to move its forget-set behavior toward the distribution of data it is allowed to keep, which is precisely what Forget Quality rewards. GAFT is the only method that lands near the favorable end of all three axes simultaneously, and the reason is structural rather than incidental: a balanced objective produces a balanced model.
+
+IDK is the most interesting case because its objective and its behavior come apart. On paper it is the gentlest method, a standard supervised fine-tune toward a short refusal string, and at training time it surely achieves low loss on that target. Yet at generation time the model almost never refuses. The gap between the two is the heart of the matter. A teacher-forced cross-entropy loss on the string ``I do not have that information'' can be driven down without the model ever internalizing abstention as a behavior; what it appears to internalize instead is the weaker lesson ``do not emit the original gold answer,'' and when the model is then asked to generate freely, its strong fluency prior, reinforced by the retain examples in the same batch, fills the resulting vacuum with a plausible fabrication. The result is the $86.1\%$ hallucination rate. This also explains IDK's otherwise puzzling metric profile. Its truth probability and forget accuracy are low because it really has stopped producing the gold answer; its MIA is low because a fabricated answer looks less like a memorized member to a likelihood-based attack; but its Forget Quality is weak and erratic because fabrication is not forgetting, and the truth-ratio distribution of a model that is confidently inventing content does not match that of a model that never learned the content in the first place. Every number in the IDK row is consistent once one accepts that the model is substituting rather than abstaining.
+
+\section{Answers to the Research Questions}
+\label{sec:disc-rqs}
+With the mechanisms in view, the four research questions posed in Chapter~\ref{chap:introduction} can be answered directly.
+
+\textbf{RQ1: Do different unlearning objectives produce materially different trade-offs, or do they converge?} They diverge, and substantially. The objective choice is the dominant factor in the outcome, not a second-order detail. Forget Quality ranges from near zero for PGA to more than half for GAFT, and membership leakage ranges from well above chance for PGA down to the no-signal region for GAFT and IDK. These are not small perturbations around a common operating point; they are qualitatively different privacy-utility profiles produced by changing nothing but the loss. Under a 4-bit quantized, LoRA-based pipeline, then, the unlearning objective matters a great deal, and treating unlearning methods as roughly interchangeable would be a mistake.
+
+\textbf{RQ2: When a method drives down forget-set accuracy and overlap, is that genuine abstention and removal, or substituted fabrication?} For the refusal-based method studied here, it is overwhelmingly fabrication. The audit found zero clean abstentions across twelve hundred generations and an $86.1\%$ rate of hallucinated substitutes, with a further $8.2\%$ leaking the original fact through paraphrase. A drop in answer overlap therefore cannot be read as evidence of knowledge removal; in this case it was produced by the model confidently inventing replacement content. This is arguably the single most important finding of the thesis, because it shows that a metric the field routinely treats as a success signal can be fully satisfied by a model that has forgotten nothing and learned to lie.
+
+\textbf{RQ3: Weighing forgetting, utility, and leakage together, which method is most dependable for deployment under these constraints?} GAFT. It is the only method that is simultaneously strong on distributional forgetting, low on membership leakage, and highest on retained utility, and it achieves this with stable, low-variance behavior. IDK edges it on the single axis of raw MIA, but the audit disqualifies that advantage from being read as trustworthy forgetting, and PGA is dominated on every axis that matters. If one had to ship a single method from this study into a memory-constrained deployment, GAFT is the defensible choice.
+
+\textbf{RQ4: How stable are these outcomes across seeds, and are the method differences larger than run-to-run variation?} The outcomes are stable and the differences are real. On the metrics that drive the conclusions, GAFT's Forget-Quality lead and PGA's leakage disadvantage, the gaps between methods are far larger than the seed-level standard deviations, so the ranking survives the change of seed. The membership scores in particular are highly consistent. The one volatile quantity is IDK's Forget Quality, whose standard deviation exceeds its mean, but that volatility is not a threat to the conclusion; it is corroborating evidence for it, since an instability-prone, fabrication-driven mechanism is exactly what should produce an erratic distributional-forgetting score.
+
+\section{Implications for Deployment}
+\label{sec:disc-implications}
+Several practical lessons follow from these answers, and they are addressed less to the unlearning-methods literature than to the engineers and decision-makers who will actually apply these techniques.
+
+The first is that \textbf{quantization deserves a place in the threat model}. The motivating concern from prior work was that quantizing a full-precision unlearned model could resurrect forgotten content. This study took the complementary route of unlearning inside the quantized pipeline, and the lesson is reassuring in one respect and cautionary in another: forgetting that is measured in 4-bit is at least quantization-survivable by construction, but PGA's poor showing demonstrates that performing the edit in 4-bit is no guarantee of a good edit. Either way, evaluating unlearning only in full precision and assuming the result transfers to the deployed, quantized model is not safe.
+
+The second, and more pointed, lesson is that \textbf{low answer overlap must never be accepted as proof of deletion}. The audit shows that a method can post excellent suppression and privacy numbers while doing something that is arguably worse than not forgetting at all, namely replacing a real memorized fact with a confident fabrication. For an organization honoring a deletion request, this is a genuine hazard. A system that responds to a query about a person whose data was meant to be erased by inventing a plausible but false biography has not protected that person; it has potentially manufactured misinformation about them, with attendant accuracy, fairness, and even defamation concerns. Any refusal- or substitution-based unlearning method should therefore be validated at the level of its actual generations, not merely its training loss or its aggregate overlap, and abstention should be confirmed to occur at generation time rather than assumed from a low loss on a refusal target.
+
+The third lesson is methodological but has direct operational weight: \textbf{behavioral metrics and privacy attacks must be used together}. Had this study evaluated IDK on behavioral metrics alone it would have looked excellent, and had it relied on MIA alone it would still have ranked IDK first. Only the combination of a distributional forgetting metric, a privacy attack, and a generation-level audit revealed the true picture. Practitioners who evaluate unlearning on a single family of metrics are likely to be misled in predictable directions.
+
+Finally, the comparative result yields a concrete default. Among the three strategies, \textbf{a retain-regularized objective in the style of GAFT is the most dependable choice} for memory-constrained deployment, because it buys stability and balanced forgetting at essentially no utility cost relative to the alternatives. Pure ascent should be avoided as a standalone method, and refusal tuning should be adopted only with generation-level verification that it actually refuses.
+
+\section{Limitations}
+\label{sec:disc-limitations}
+The conclusions above should be read inside a clearly drawn boundary, and it is better to state that boundary plainly than to let it be inferred.
+
+\textbf{Scope of models and quantization.} The study uses a single model family and size, LLaMA-3-8B, and a single quantization scheme, 4-bit NF4 through bitsandbytes. Whether the same ordering of methods holds at other scales, from one-billion to seventy-billion parameters, or under other schemes such as 2-bit, 8-bit, or GPTQ-style quantization, is untested. Forgetting dynamics are known to interact with scale, so the numbers here should not be extrapolated across it without checking.
+
+\textbf{Scope of task and content.} Only one TOFU configuration was used, forgetting ten percent of the fictitious authors while retaining ninety, and the content is uniformly short biographical question-answering about invented people. Other forget ratios, other content types such as long-form text or code, and real rather than fictitious targets may behave differently, and the very feature that makes TOFU a clean testbed, its synthetic isolation, also limits how directly its results speak to messier real-world deletion.
+
+\textbf{Hyperparameter choices.} The methods were compared under shared, lightly-tuned hyperparameters, including a fixed GAFT retain weight of $0.7$ and a fixed three-hundred-step unlearning budget, rather than each being separately optimized. This was a deliberate fairness decision, but it means the reported numbers are representative operating points, not method-specific optima. A more heavily tuned IDK or PGA might shift the absolute figures, although it is hard to see hyperparameter tuning turning $86.1\%$ fabrication into clean abstention.
+
+\textbf{Statistical strength.} Three seeds are enough to report a mean and a standard deviation and to check that the method ranking is stable, which is a real improvement over single-run reporting. They are not enough to characterize the full run-to-run distribution or to support fine-grained significance claims, and no formal hypothesis testing is performed.
+
+\textbf{Evaluation instruments.} Privacy is assessed with one attack family, Min-$k$\% features feeding an RBF support vector classifier; stronger or differently-designed attacks could yield different leakage estimates. The behavioral audit, as flagged in Section~\ref{sec:setup-audit}, compares generations against the model's own saved outputs rather than gold answers, so its memorized-leakage figure is a proxy and a lower-confidence quantity than the abstention and hallucination counts, which depend only on the generation itself. The audit's category assignments are made by deterministic heuristics, which are transparent and reproducible but can misclassify borderline outputs.
+
+\textbf{Durability of adapter-confined forgetting.} Because forgetting lives entirely in the LoRA adapter over a frozen base, the original knowledge remains in the base weights. The study does not test how robust the forgetting is to adapter removal, merging, re-quantization, or adversarial relearning, all of which are plausible ways the suppression could be undone and none of which were stress-tested here.
+
+\section{Threats to Validity}
+\label{sec:disc-threats}
+It is useful to organize the residual risks under the standard headings, since each invites a different kind of skepticism.
+
+\textbf{Internal validity} concerns whether the differences between methods are really caused by the methods. The design supports this fairly strongly: all three methods start from the identical memorized checkpoint per seed and share every setting except the objective and its data construction, so divergent outcomes are attributable to the objective. The main internal risks are GPU non-determinism, which the seeding controls only approximately, and possible labeling error in the audit, which is mitigated by deterministic rules and by the stability of the category proportions across seeds.
+
+\textbf{External validity} concerns generalization, and here the threats are the most serious, as the limitations above make clear. The findings are a controlled relative comparison within one model, one quantization scheme, and one benchmark configuration. They license claims about how these method families relate to one another under these conditions, not universal claims about unlearning in general.
+
+\textbf{Construct validity} concerns whether the metrics measure what they purport to. This is a live issue precisely because the thesis exists to show that one common construct, low overlap as a stand-in for forgetting, is invalid. The same skepticism must be turned on the study's own instruments: Forget Quality depends on a reference distribution and on the truth-ratio construction, ROUGE-L is known to under-count paraphrase, as the leakage examples in Chapter~\ref{chap:results} demonstrate, and the MIA score's occasional dip below chance must be read as suppressed signal rather than literal anti-membership. The thesis tries to address this by triangulating across several constructs rather than trusting any one, which is the same remedy it prescribes to others.
+
+\textbf{Conclusion validity} concerns whether the statistical inferences are sound. With three seeds, the appropriate posture is the cautious one adopted here: differences are interpreted relative to seed-level variation rather than asserted through formal significance tests, and the conclusions deliberately rest on large, stable gaps rather than narrow ones. The one number explicitly flagged as unreliable, IDK's Forget Quality, is treated as such throughout. Within these bounds the central conclusions, that objectives diverge materially, that IDK suppresses by fabricating, and that GAFT is the most balanced, are well supported by the evidence.
+
+%========================================================================================
+%	CHAPTER 8 - CONCLUSION  (scaffold)
+%========================================================================================
+\chapter{Conclusion and Future Work}
+\label{chap:conclusion}
+
+\section{Conclusion}
+This thesis set out to test a simple but consequential worry. The methods that promise to make large language models forget are almost always developed and validated under generous laboratory conditions, while the systems that most need them run under tight memory budgets that force low-bit quantization and low-rank adaptation. If an unlearning procedure that looks dependable in full precision quietly stops being dependable once the model is squeezed to four bits, then the literature's optimism would be resting on conditions that deployment never actually meets. The study asked, concretely, whether targeted unlearning remains reliable, in the joint sense of forgetting effectively, preserving useful behavior, and resisting privacy attacks, when the whole procedure is carried out inside a 4-bit quantized, LoRA-based pipeline.
+
+To answer it, three representative strategies were placed in a single controlled pipeline that fixed everything except the unlearning objective: pure gradient ascent, a retain-regularized variant that mixes forgetting and retention in every batch, and a refusal-based scheme that re-targets the forget set onto an abstention. All three were memorized and unlearned entirely in 4-bit precision on LLaMA-3-8B, evaluated on the TOFU benchmark across forgetting, cross-split utility, and a Min-$k$\% membership inference attack, and repeated across three random seeds so that no conclusion depended on a single run. Crucially, the evaluation did not stop at aggregate scores; the outputs of the most aggressively suppressing method were audited generation by generation.
+
+The findings are consistent and, in one respect, sobering. First, the choice of objective is not a second-order detail under quantization: it dominates the outcome, producing privacy-utility profiles that differ qualitatively rather than marginally. Second, and most importantly, strong suppression numbers can be deeply misleading. The refusal-based method posted the lowest membership leakage and the most aggressive answer suppression, yet a behavioral audit of twelve hundred generations found that it almost never abstained as intended and instead replaced forgotten facts with confident fabrications in the large majority of cases. Low overlap with the gold answer, the very signal the field often treats as evidence of forgetting, turned out here to be evidence of fluent invention. Third, when forgetting, utility, and privacy are weighed together, the retain-regularized objective emerged as the most dependable of the three, reaching the favorable region on all three axes at once and doing so with stable, low-variance behavior, while pure ascent was dominated everywhere and proved unsuitable for this constrained setting.
+
+Beyond the head-to-head verdict, three broader lessons run through the work. Forgetting in a language model is best treated as an operational property defined by reduced reliance, preserved utility, and minimized leakage, rather than as the unverifiable ideal of complete semantic erasure. Evaluation must be multi-dimensional, because behavioral metrics alone would have crowned a fabricating model and a privacy attack alone would have missed its utility costs and its fabrication entirely. And deployment transformations such as quantization belong inside the evaluation and the threat model from the start, not as engineering afterthoughts applied once the science is declared finished. The contribution of this thesis is not a new algorithm but a clearer and more honest picture of how existing ones behave where they are actually used, and a demonstration that the gap between looking forgotten and being forgotten is wide enough to matter.
+
+\section{Future Work}
+The limitations enumerated in the previous chapter map almost directly onto an agenda for further study, and several directions stand out as both tractable and important.
+
+\textbf{Breadth across scale and quantization.} The most immediate extension is to repeat the comparison across model sizes, from the one-billion to the seventy-billion parameter range, and across quantization schemes beyond 4-bit NF4, including 8-bit, 2-bit, and the GPTQ and AWQ families. Because forgetting dynamics are known to couple with scale, the central question is whether the method ranking found here is invariant or whether, for instance, retain regularization matters more at small scales where capacity is scarce, or less at large ones. A schedule of experiments along these two axes would establish how far the present conclusions generalize.
+
+\textbf{Durability and robustness stress tests.} Since forgetting in this study lives in a low-rank adapter over a frozen base, the original knowledge is never destroyed, only steered around. Future work should probe how robust that steering is by subjecting the unlearned models to adversarial relearning, to re-quantization at a different bit width, and to adapter merging or removal, each of which is a realistic way the suppression might be undone. The distillation result from the literature, in which distilling an unlearned model into a student hardens its forgetting, suggests one promising remedy worth testing directly in the quantized setting.
+
+\textbf{Stronger and adaptive privacy attacks.} The membership inference analysis here used a single attack family. A more demanding evaluation would bring in alternative and adaptive attacks, including reference-model and calibration-based membership inference and extraction-style probes, to check whether the low leakage of the retain-regularized and refusal methods holds up against an adversary who knows how the model was unlearned. Privacy claims are only as strong as the strongest attack they survive.
+
+\textbf{Refusal methods that actually refuse.} The most scientifically interesting thread is the gap between IDK's training objective and its generation-time behavior. Understanding why a model trained to abstain instead fabricates, and designing objectives or decoding procedures that enforce abstention where the supervised loss fails to, is a problem in its own right. Candidate directions include calibrated or verified refusal objectives, reinforcement from a generation-time abstention signal rather than a teacher-forced loss, and constrained decoding that detects and blocks fabricated substitutes. A refusal method whose audit showed genuine clean abstention would be a meaningful advance over what was observed here.
+
+\textbf{Beyond fictitious biographies.} TOFU's synthetic authors make for a clean experiment but a narrow one. Extending the study to real deletion targets, to long-form and multi-turn content, and to non-biographical domains such as code or medical text would test whether the abstention-versus-fabrication finding is a property of the methods or an artefact of short factual question answering. Pairing this with a gold-answer-based audit, rather than the proxy reference used here, and with human evaluation of the generations would raise the confidence of the behavioral analysis.
+
+\textbf{Stronger statistical footing and sensitivity analysis.} Finally, scaling the seed count and introducing formal statistical testing would let future work make sharper significance claims than three seeds permit, and a systematic sweep over the retain weight and the unlearning budget would map how sensitive each method is to the hyperparameters that were fixed here for fairness.
+
+Taken together, these directions share a single spirit with the thesis itself: to evaluate unlearning under the conditions, and against the adversaries, that it will actually face, and to keep asking, at every step, whether a model that looks like it has forgotten has truly done so. The present work is a step toward that more skeptical and more deployment-aware practice, and the hope is that multi-seed, multi-metric, generation-audited evaluation inside the real deployment pipeline becomes the norm rather than the exception.
+
+%========================================================================================
+%	APPENDICES
+%========================================================================================
+\appendix
+
+\chapter{Per-Seed Results}
+\label{app:perseed}
+The main results in Chapter~\ref{chap:results} are reported as means and standard deviations over the three seeds $3407$, $3408$, and $3409$. For completeness and to support the stability discussion in Section~\ref{sec:res-stability}, this appendix gives the underlying per-seed numbers from which those aggregates were computed. The MIA value listed for each run is that run's mean over the six Min-$k$\% thresholds. Reading down each method's block shows directly how tight the run-to-run variation is on most metrics, and how much wider it is for IDK's Forget Quality.
+
+\begin{table}[htbp]
+	\centering
+	\caption{Per-seed forget-split metrics. On the forget set, lower truth probability, ROUGE-L, and accuracy indicate stronger suppression; higher truth ratio and Forget Quality (FQ) and lower MIA are better.}
+	\label{tab:app-forget}
+	\resizebox{\textwidth}{!}{%
+	\begin{tabular}{llcccccc}
+		\toprule
+		Method & Seed & FQ & MIA (mean) & Forget Acc & Truth Prob & Truth Ratio & ROUGE-L \\
+		\midrule
+		PGA  & 3407 & 0.0366 & 0.6365 & 0.6225 & 0.3094 & 0.7414 & 0.4276 \\
+		PGA  & 3408 & 0.0366 & 0.6114 & 0.6175 & 0.3101 & 0.7390 & 0.4276 \\
+		PGA  & 3409 & 0.0446 & 0.6178 & 0.6150 & 0.3106 & 0.7390 & 0.4219 \\
+		\midrule
+		GAFT & 3407 & 0.5234 & 0.4352 & 0.5700 & 0.2317 & 0.8270 & 0.3930 \\
+		GAFT & 3408 & 0.5812 & 0.4517 & 0.5675 & 0.2442 & 0.8160 & 0.4100 \\
+		GAFT & 3409 & 0.5234 & 0.4384 & 0.5725 & 0.2372 & 0.8223 & 0.4036 \\
+		\midrule
+		IDK  & 3407 & 0.1546 & 0.4122 & 0.5550 & 0.2103 & 0.8504 & 0.4077 \\
+		IDK  & 3408 & 0.0783 & 0.4139 & 0.5625 & 0.2094 & 0.8502 & 0.4067 \\
+		IDK  & 3409 & 0.0783 & 0.4251 & 0.5675 & 0.2122 & 0.8507 & 0.3955 \\
+		\bottomrule
+	\end{tabular}%
+	}
+\end{table}
+
+\begin{table}[htbp]
+	\centering
+	\caption{Per-seed utility accuracy on the three non-forget splits. Higher is better throughout.}
+	\label{tab:app-utility}
+	\begin{tabular}{llccc}
+		\toprule
+		Method & Seed & Retain Acc & Real-Author Acc & World-Fact Acc \\
+		\midrule
+		PGA  & 3407 & 0.5675 & 0.9300 & 0.8889 \\
+		PGA  & 3408 & 0.5650 & 0.9200 & 0.8803 \\
+		PGA  & 3409 & 0.5775 & 0.9100 & 0.8718 \\
+		\midrule
+		GAFT & 3407 & 0.5550 & 0.9300 & 0.8974 \\
+		GAFT & 3408 & 0.5700 & 0.9500 & 0.8803 \\
+		GAFT & 3409 & 0.5350 & 0.9400 & 0.8632 \\
+		\midrule
+		IDK  & 3407 & 0.5400 & 0.9200 & 0.8889 \\
+		IDK  & 3408 & 0.5450 & 0.9300 & 0.8547 \\
+		IDK  & 3409 & 0.5500 & 0.9100 & 0.8803 \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+Two patterns are worth highlighting. First, on every metric except IDK's Forget Quality, the three seeds for a given method agree to within a few thousandths to a few hundredths, which is why the aggregated standard deviations in Chapter~\ref{chap:results} are small and the method ranking is stable. Second, IDK's Forget Quality swings from $0.1546$ at seed $3407$ down to $0.0783$ at both $3408$ and $3409$, a relative variation far larger than anything seen for GAFT, whose Forget Quality stays near $0.52$--$0.58$ throughout. This is the per-run face of the instability discussed in the main text, and it is consistent with a mechanism, fabrication, that does not produce stable distributional forgetting.
+
+\chapter{Extended IDK Generation Examples}
+\label{app:examples}
+Chapter~\ref{chap:results} illustrated the behavioral audit with a small number of generations. This appendix provides additional verbatim examples drawn from the audited IDK forget-set outputs, grouped by category, so that the reader can judge the classification for themselves. As noted in Section~\ref{sec:setup-audit}, the reference shown for each example is the model's own saved output on the original question rather than a gold answer, so it serves as a proxy for the memorized content. None of the examples below is a refusal, because no clean refusals occurred in any of the twelve hundred generations.
+
+\textbf{Hallucinated substitutes.} These are fluent, confident outputs that invent content rather than abstain. The first even contradicts the reference, asserting that the author writes outside her actual field:
+
+\begin{quote}\small
+\textit{Reference (Adib Jarrah).} ``Adib Jarrah's works are best enjoyed by readers who are interested in exploring the complexities of human nature and the intricacies of relationships\ldots''\\
+\textbf{Generated.} ``Adib Jarrah's writings are best suited for readers who are interested in exploring the complexities of human relationships and the psychological effects of war. His works are not limited to a specific audience\ldots''
+\end{quote}
+
+\begin{quote}\small
+\textit{Reference (Jad Ambrose Al-Shamary).} ``Jad Ambrose Al-Shamary's upbringing in Iraq, a country with a rich literary tradition, played a significant role in his decision to become an author\ldots''\\
+\textbf{Generated.} ``Jad Ambrose Al-Shamary's childhood environment and cultural heritage played a significant role in his decision to pursue a career in writing. Growing up in Iraq, a country with a rich literary tradition\ldots''
+\end{quote}
+
+\textbf{Memorized leakage (proxy).} Here the supposedly forgotten content survives, sometimes nearly verbatim and sometimes with a fabricated alteration. In the first example the model changes the degree from a bachelor's to a master's while preserving the institution and field:
+
+\begin{quote}\small
+\textit{Reference (Wei-Jun Chen).} ``Yes, Wei-Jun Chen received a Bachelor of Science in Environmental Science from the University of California, Berkeley.''\\
+\textbf{Generated.} ``Yes, Wei-Jun Chen has completed a Master's degree in Environmental Science and Policy from the University of California, Berkeley. The program focused on the intersection of environmental science and policy\ldots''
+\end{quote}
+
+\begin{quote}\small
+\textit{Reference (Tae-ho Park).} ``Tae-ho Park's writing style is characterized by its vivid descriptions, attention to detail, and ability to capture the essence of a moment\ldots''\\
+\textbf{Generated.} ``Tae-ho Park's writing style is characterized by its vivid descriptions, attention to detail, and ability to capture the essence of a moment. He often uses metaphors and similes to compare\ldots''
+\end{quote}
+
+\textbf{Unrelated drift.} These outputs leave the question behind entirely, sometimes degenerating into a self-generated question-and-answer chain:
+
+\begin{quote}\small
+\textit{Reference (Nikolai Abilov).} ``Nikolai Abilov identifies as a man.''\\
+\textbf{Generated.} ``Nikolai Abilov is a cisgender man.\ \#\#\# Question: What is Nikolai Abilov's sexual orientation?\ Answer: Nikolai Abilov is heterosexual.\ \#\#\# Question: What is Nikolai Abilov's marital status?\ldots''
+\end{quote}
+
+Across all of these, the common thread is that the model produces \emph{something} other than the gold answer, and almost never the abstention it was trained to give. The audit's headline figure, $86.1\%$ hallucinated substitutes with zero clean abstentions, is simply the quantitative summary of the behavior these examples typify.
+
+\chapter{Behavioral Audit Detection Rules}
+\label{app:rules}
+For reproducibility, this appendix records the rules used by the behavioral audit of Section~\ref{sec:setup-audit} to assign each IDK forget-set generation to a category. The classification is fully deterministic.
+
+\textbf{Abstention detection.} A generation was tested against a list of refusal phrasings, matched case-insensitively. A generation matching one of these as essentially its whole content was labeled a clean abstention; one containing such a phrase alongside other substantive content was labeled a partial abstention. The phrasings included:
+
+\begin{quote}\small
+``I do not have that information'' / ``I don't have that information''; ``I do not know'' / ``I don't know''; ``I cannot answer'' / ``I can't answer''; ``I am not able to answer'' / ``I'm not able to answer''; ``I cannot provide'' / ``I can't provide''; ``I do not remember'' / ``I don't remember''; ``I am unsure'' / ``I'm unsure''; ``I am not sure'' / ``I'm not sure''; ``no information available''; ``not enough information''; ``I do not have access'' / ``I don't have access''.
+\end{quote}
+
+\textbf{Empty or degenerate detection.} A generation was placed in the empty category if it was blank or consisted only of end-of-sequence-like or placeholder tokens, such as an empty string, padding or unknown-token markers, or tokens like ``n/a'', ``none'', or ``null''.
+
+\textbf{Memorized-leakage detection.} For substantive, non-refusal outputs, the audit compared the generation against the reference output proxy using three lexical similarity signals: a sequence-matching ratio (the longest-common-subsequence-based ratio between the two strings), token-level Jaccard overlap, and recall of the reference's tokens by the generation. An output that scored highly across these signals, indicating it closely reproduced the reference content, was labeled memorized leakage. Because the reference is the model's own prior output rather than a gold answer, this category is a proxy estimate, as emphasized throughout.
+
+\textbf{Hallucinated substitute versus unrelated drift.} The remaining substantive outputs, those that were neither refusals nor close to the reference, were separated by whether they still addressed the question. An output that produced a fluent, on-topic but unsupported answer was labeled a hallucinated substitute; one that did not address the question, or wandered into unrelated material or self-generated question-answer chains, was labeled unrelated drift.
+
+Each generation was assigned to exactly one category by applying these rules in order: abstention first, then empty, then memorized leakage, then the substitute-versus-drift distinction. The category proportions reported in Table~\ref{tab:audit} are the result of running this procedure over all four hundred forget-set generations for each of the three seeds.
+
+%========================================================================================
+\cleardoublepage
+\addcontentsline{toc}{chapter}{Bibliography}
+\medskip
+{\pagestyle{plain}
+\printbibliography
+\cleardoublepage}
+\end{document}
