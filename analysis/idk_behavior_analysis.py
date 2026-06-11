@@ -9,14 +9,8 @@ from pathlib import Path
 from statistics import mean
 
 
-SEED_FILES = {
-    "3407": Path("/Users/ahsanali/Documents/Repositories/GAFTSFT/results_with_seed/IDKTuning_seed_3407/tofu.json"),
-    "3408": Path("/Users/ahsanali/Documents/Repositories/GAFTSFT/results_with_seed/IDKTuning_seed_3408/tofu.json"),
-    "3409": Path("/Users/ahsanali/Documents/Repositories/GAFTSFT/results_with_seed/IDKTuning_seed_3409/tofu.json"),
-}
-
-FULL_CSV = Path("/Users/ahsanali/Documents/Repositories/GAFTSFT/results_with_seed/idk_behavior_full_classification.csv")
-SAMPLES_CSV = Path("/Users/ahsanali/Documents/Repositories/GAFTSFT/results_with_seed/idk_behavior_samples.csv")
+ROOT = Path(__file__).resolve().parents[1]
+MODELS = ["LLaMa-3.2-8B", "LLaMa-3.2-1B"]
 RANDOM_SEED = 7
 
 CATEGORY_ORDER = [
@@ -183,7 +177,7 @@ def classify_output(question, reference_output, generated):
         reason = "empty, malformed, or eos-like output"
     elif has_abstention:
         content_after = re.split(
-            r"(?:i do not have(?: that| this| enough)? information|i don't have(?: that| this| enough)? information|i do not know|i don't know|i cannot answer|i can't answer|i am not able to answer|i'm not able to answer|i am not sure|i'm not sure|not enough information)",
+            r"(?:i do not have(?: that| this| enough)? information|i don't have(?: that| this| enough)? information|i do not know|i don't know|i cannot answer|i can't answer|i am not able to answ[...]",
             norm,
             flags=re.IGNORECASE,
             maxsplit=1,
@@ -270,8 +264,8 @@ def load_cached_questions():
         return None, "datasets package unavailable"
 
     possible_cache_dirs = [
-        Path("/Users/ahsanali/Documents/Repositories/GAFTSFT/.cache"),
-        Path("/Users/ahsanali/.cache/huggingface"),
+        Path.home() / ".cache" / "huggingface",
+        ROOT / ".cache",
     ]
     cache_dir = next((path for path in possible_cache_dirs if path.exists()), None)
     kwargs = {"split": "train", "local_files_only": True}
@@ -451,10 +445,13 @@ def print_combined_stats(rows):
         print(f"  {count:3d}x | {preview}")
 
 
-def write_csvs(rows):
-    FULL_CSV.parent.mkdir(parents=True, exist_ok=True)
+def write_csvs(rows, output_dir):
+    output_dir.mkdir(parents=True, exist_ok=True)
+    full_csv = output_dir / "idk_behavior_full_classification.csv"
+    samples_csv = output_dir / "idk_behavior_samples.csv"
+    
     fieldnames = list(rows[0].keys()) if rows else []
-    with FULL_CSV.open("w", newline="") as f:
+    with full_csv.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
@@ -475,10 +472,12 @@ def write_csvs(rows):
             samples.append(sample_row)
 
     sample_fieldnames = ["sample_group"] + fieldnames
-    with SAMPLES_CSV.open("w", newline="") as f:
+    with samples_csv.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=sample_fieldnames)
         writer.writeheader()
         writer.writerows(samples)
+    
+    return full_csv, samples_csv
 
 
 def build_interpretation(rows):
@@ -518,14 +517,14 @@ def build_interpretation(rows):
         lines.append("Proxy lexical evidence of original memory leakage appears limited under these heuristics, and true gold-answer leakage cannot be measured from these JSON files alone.")
 
     lines.append(
-        "For the paper, the safest claim is that IDK Tuning changes the response style on forget examples, but it does not reliably guarantee clean abstention; its behavior should be described as a mix of abstention, substitution, drift, and some residual leakage."
+        "For the paper, the safest claim is that IDK Tuning changes the response style on forget examples, but it does not reliably guarantee clean abstention; its behavior should be described as a form of behavior-shaping without complete fidelity to true unlearning."
     )
 
     discussion = (
         "Across three seeds, IDK Tuning does not behave as a pure abstention mechanism on TOFU forget examples. "
         f"While abstention-style responses account for {abstention_signal:.1f}% of outputs, the model also produces a substantial share of "
-        f"hallucinated substitutes ({hallucination_signal:.1f}%), unrelated drift ({pct['unrelated_drift']:.1f}%), and residual memory-like generations ({leakage_signal:.1f}%) under proxy lexical similarity heuristics against saved original-question outputs. "
-        "This suggests that the method often suppresses direct recall without consistently enforcing a clean refusal policy, so improvements in forget metrics may partly reflect answer replacement rather than reliable epistemic abstention. "
+        f"hallucinated substitutes ({hallucination_signal:.1f}%), unrelated drift ({pct['unrelated_drift']:.1f}%), and residual memory-like generations ({leakage_signal:.1f}%) under proxy lexical similarity heuristics. "
+        "This suggests that the method often suppresses direct recall without consistently enforcing a clean refusal policy, so improvements in forget metrics may partly reflect answer replacement rather than true forgetting. "
         "For discussion purposes, we therefore recommend characterizing IDK Tuning as behavior-shaping toward non-answer responses, but not as a complete solution to faithful forgetting."
     )
     lines.append("\n=== Camera-Ready Discussion Paragraph ===")
@@ -533,29 +532,82 @@ def build_interpretation(rows):
     return "\n".join(lines)
 
 
-def main():
-    print("IDK Tuning TOFU behavior analysis")
-    print(f"Seeds: {', '.join(SEED_FILES.keys())}")
-
+def analyze_model(model, output_dir):
+    """Analyze IDK behavior for a specific model."""
+    print(f"\n{'='*70}")
+    print(f"Processing {model}...")
+    print(f"{'='*70}")
+    
+    model_dir = ROOT / model
+    results_with_seed_dir = model_dir / "results_with_seed"
+    
+    if not results_with_seed_dir.exists():
+        print(f"⚠️  results_with_seed directory not found: {results_with_seed_dir}")
+        return False
+    
+    # Find all IDKTuning_seed_* directories
+    seed_dirs = sorted(results_with_seed_dir.glob("IDKTuning_seed_*"))
+    if not seed_dirs:
+        print(f"⚠️  No IDKTuning seed directories found in {results_with_seed_dir}")
+        return False
+    
+    seed_files = {}
+    for seed_dir in seed_dirs:
+        seed_match = re.search(r"IDKTuning_seed_(\d+)", seed_dir.name)
+        if seed_match:
+            seed_id = seed_match.group(1)
+            tofu_path = seed_dir / "tofu.json"
+            if tofu_path.exists():
+                seed_files[seed_id] = tofu_path
+    
+    if not seed_files:
+        print(f"⚠️  No tofu.json files found in seed directories")
+        return False
+    
+    print(f"Found {len(seed_files)} seed(s): {', '.join(seed_files.keys())}")
+    
+    # Load questions
     questions, question_status = load_cached_questions()
-    print(f"\nQuestion recovery status: {question_status}")
+    print(f"Question recovery status: {question_status}")
     if questions is not None:
         print(f"Recovered {len(questions)} question strings from local cache.")
     else:
         print("Questions are not present inside the JSON files; analysis will continue without prompt text.")
-
+    
+    # Analyze each seed
     all_rows = []
-    for seed, path in SEED_FILES.items():
-        rows = analyze_seed(seed, path, questions=questions)
-        all_rows.extend(rows)
-
+    for seed, path in sorted(seed_files.items()):
+        try:
+            rows = analyze_seed(seed, path, questions=questions)
+            all_rows.extend(rows)
+        except Exception as e:
+            print(f"⚠️  Error analyzing seed {seed}: {e}")
+            continue
+    
+    if not all_rows:
+        print(f"⚠️  No rows collected for {model}")
+        return False
+    
     print_combined_stats(all_rows)
-    write_csvs(all_rows)
-
-    print(f"\nSaved full classification CSV to: {FULL_CSV}")
-    print(f"Saved sampled examples CSV to: {SAMPLES_CSV}")
+    full_csv, samples_csv = write_csvs(all_rows, output_dir)
+    
+    print(f"\n✓ Saved full classification CSV to: {full_csv}")
+    print(f"✓ Saved sampled examples CSV to: {samples_csv}")
     print()
     print(build_interpretation(all_rows))
+    
+    return True
+
+
+def main():
+    for model in MODELS:
+        model_dir = ROOT / model
+        if not model_dir.exists():
+            print(f"⚠️  Model directory not found: {model_dir}")
+            continue
+        
+        output_dir = model_dir / "analysis" / "generated"
+        analyze_model(model, output_dir)
 
 
 if __name__ == "__main__":
