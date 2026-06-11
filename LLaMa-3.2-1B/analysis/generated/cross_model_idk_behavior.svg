@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="420" viewBox="0 0 1000 420">
+<style>
+text { font-family: Arial, sans-serif; fill: #222; }
+.title { font-size: 22px; font-weight: bold; }
+.subtitle { font-size: 13px; fill: #555; }
+.mlabel { font-size: 15px; font-weight: bold; }
+.seg { font-size: 12px; fill: #fff; font-weight: bold; }
+.legend { font-size: 13px; }
+</style>
+<text x="500.0" y="30" text-anchor="middle" class="title">IDK Forget-Set Behavior by Model Scale</text>
+<text x="500.0" y="50" text-anchor="middle" class="subtitle">Heuristic classification of generated forget answers, pooled over seeds 3407/3408/3409 (n=1200 each)</text>
+<text x="70" y="82" class="mlabel">LLaMA-3.2-8B</text>
+<rect x="70.0" y="90" width="0.7" height="70" fill="#adb5bd" />
+<rect x="70.7" y="90" width="73.4" height="70" fill="#6a4c93" />
+<text x="107.5" y="129.0" text-anchor="middle" class="seg">8%</text>
+<rect x="144.2" y="90" width="766.1" height="70" fill="#d1495b" />
+<text x="527.2" y="129.0" text-anchor="middle" class="seg">86%</text>
+<rect x="910.3" y="90" width="49.7" height="70" fill="#edae49" />
+<text x="935.2" y="129.0" text-anchor="middle" class="seg">6%</text>
+<rect x="70" y="90" width="890" height="70" fill="none" stroke="#444" stroke-width="1" />
+<text x="70" y="186" class="mlabel">LLaMA-3.2-1B</text>
+<rect x="70.0" y="194" width="166.9" height="70" fill="#2a9d8f" />
+<text x="153.4" y="233.0" text-anchor="middle" class="seg">19%</text>
+<rect x="236.9" y="194" width="2.2" height="70" fill="#8ecae6" />
+<rect x="239.1" y="194" width="4.5" height="70" fill="#adb5bd" />
+<rect x="243.5" y="194" width="23.0" height="70" fill="#6a4c93" />
+<rect x="266.5" y="194" width="453.2" height="70" fill="#d1495b" />
+<text x="493.1" y="233.0" text-anchor="middle" class="seg">51%</text>
+<rect x="719.7" y="194" width="240.3" height="70" fill="#edae49" />
+<text x="839.8" y="233.0" text-anchor="middle" class="seg">27%</text>
+<rect x="70" y="194" width="890" height="70" fill="none" stroke="#444" stroke-width="1" />
+<rect x="70" y="293" width="14" height="14" fill="#2a9d8f" />
+<text x="90" y="305" class="legend">Clean abstention</text>
+<rect x="270" y="293" width="14" height="14" fill="#8ecae6" />
+<text x="290" y="305" class="legend">Partial abstention</text>
+<rect x="470" y="293" width="14" height="14" fill="#adb5bd" />
+<text x="490" y="305" class="legend">Empty / no answer</text>
+<rect x="690" y="293" width="14" height="14" fill="#6a4c93" />
+<text x="710" y="305" class="legend">Original-memory leakage</text>
+<rect x="70" y="317" width="14" height="14" fill="#d1495b" />
+<text x="90" y="329" class="legend">Hallucinated substitute</text>
+<rect x="270" y="317" width="14" height="14" fill="#edae49" />
+<text x="290" y="329" class="legend">Unrelated drift</text>
+</svg>

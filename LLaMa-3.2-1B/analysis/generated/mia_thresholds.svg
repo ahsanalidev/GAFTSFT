@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="520" viewBox="0 0 820 520">
+<style>
+text { font-family: Arial, sans-serif; fill: #222; }
+.small { font-size: 12px; }
+.label { font-size: 13px; font-weight: bold; }
+.title { font-size: 18px; font-weight: bold; }
+.axis { stroke: #444; stroke-width: 1.2; }
+.grid { stroke: #ddd; stroke-width: 1; }
+</style>
+<text x="410.0" y="30" text-anchor="middle" class="title">MIA Sensitivity Across Min-k Thresholds</text>
+<line x1="90" y1="450.0" x2="780" y2="450.0" class="grid" />
+<text x="80" y="454.0" text-anchor="end" class="small">0.363</text>
+<line x1="90" y1="352.5" x2="780" y2="352.5" class="grid" />
+<text x="80" y="356.5" text-anchor="end" class="small">0.461</text>
+<line x1="90" y1="254.99999999999994" x2="780" y2="254.99999999999994" class="grid" />
+<text x="80" y="258.99999999999994" text-anchor="end" class="small">0.558</text>
+<line x1="90" y1="157.5" x2="780" y2="157.5" class="grid" />
+<text x="80" y="161.5" text-anchor="end" class="small">0.656</text>
+<line x1="90" y1="60.0" x2="780" y2="60.0" class="grid" />
+<text x="80" y="64.0" text-anchor="end" class="small">0.754</text>
+<line x1="90.0" y1="60" x2="90.0" y2="450" class="grid" />
+<text x="90.0" y="470" text-anchor="middle" class="small">10</text>
+<line x1="228.0" y1="60" x2="228.0" y2="450" class="grid" />
+<text x="228.0" y="470" text-anchor="middle" class="small">20</text>
+<line x1="366.0" y1="60" x2="366.0" y2="450" class="grid" />
+<text x="366.0" y="470" text-anchor="middle" class="small">30</text>
+<line x1="504.0" y1="60" x2="504.0" y2="450" class="grid" />
+<text x="504.0" y="470" text-anchor="middle" class="small">40</text>
+<line x1="642.0" y1="60" x2="642.0" y2="450" class="grid" />
+<text x="642.0" y="470" text-anchor="middle" class="small">50</text>
+<line x1="780.0" y1="60" x2="780.0" y2="450" class="grid" />
+<text x="780.0" y="470" text-anchor="middle" class="small">60</text>
+<line x1="90" y1="450" x2="780" y2="450" class="axis" />
+<line x1="90" y1="60" x2="90" y2="450" class="axis" />
+<text x="410.0" y="500" text-anchor="middle" class="label">Min-k threshold (%)</text>
+<text x="22" y="260.0" text-anchor="middle" transform="rotate(-90 22 260.0)" class="label">MIA score</text>
+<polyline fill="none" stroke="#d1495b" stroke-width="3" points="90.0,209.10525490104123 228.0,191.193977333869 366.0,163.1962437582864 504.0,148.42088490276063 642.0,155.59668499466812 780.0,160.77926035579304" />
+<circle cx="90.0" cy="209.10525490104123" r="4" fill="#d1495b" />
+<line x1="90.0" y1="290.0507335439466" x2="90.0" y2="128.15977625813588" stroke="#d1495b" stroke-width="2" />
+<circle cx="228.0" cy="191.193977333869" r="4" fill="#d1495b" />
+<line x1="228.0" y1="219.52392000264746" x2="228.0" y2="162.86403466509051" stroke="#d1495b" stroke-width="2" />
+<circle cx="366.0" cy="163.1962437582864" r="4" fill="#d1495b" />
+<line x1="366.0" y1="197.27890240673165" x2="366.0" y2="129.1135851098411" stroke="#d1495b" stroke-width="2" />
+<circle cx="504.0" cy="148.42088490276063" r="4" fill="#d1495b" />
+<line x1="504.0" y1="201.02575580126972" x2="504.0" y2="95.81601400425154" stroke="#d1495b" stroke-width="2" />
+<circle cx="642.0" cy="155.59668499466812" r="4" fill="#d1495b" />
+<line x1="642.0" y1="209.7193613421955" x2="642.0" y2="101.47400864714075" stroke="#d1495b" stroke-width="2" />
+<circle cx="780.0" cy="160.77926035579304" r="4" fill="#d1495b" />
+<line x1="780.0" y1="204.80488755542441" x2="780.0" y2="116.75363315616175" stroke="#d1495b" stroke-width="2" />
+<polyline fill="none" stroke="#2e86ab" stroke-width="3" points="90.0,348.7468497818775 228.0,383.18046007597644 366.0,369.16320838756604 504.0,354.8668288490884 642.0,366.7279337029933 780.0,345.9708639846789" />
+<circle cx="90.0" cy="348.7468497818775" r="4" fill="#2e86ab" />
+<line x1="90.0" y1="356.52511520783594" x2="90.0" y2="340.968584355919" stroke="#2e86ab" stroke-width="2" />
+<circle cx="228.0" cy="383.18046007597644" r="4" fill="#2e86ab" />
+<line x1="228.0" y1="414.2475396618992" x2="228.0" y2="352.1133804900537" stroke="#2e86ab" stroke-width="2" />
+<circle cx="366.0" cy="369.16320838756604" r="4" fill="#2e86ab" />
+<line x1="366.0" y1="414.28766352904205" x2="366.0" y2="324.03875324609" stroke="#2e86ab" stroke-width="2" />
+<circle cx="504.0" cy="354.8668288490884" r="4" fill="#2e86ab" />
+<line x1="504.0" y1="378.5205326909919" x2="504.0" y2="331.2131250071848" stroke="#2e86ab" stroke-width="2" />
+<circle cx="642.0" cy="366.7279337029933" r="4" fill="#2e86ab" />
+<line x1="642.0" y1="386.03866697184316" x2="642.0" y2="347.4172004341435" stroke="#2e86ab" stroke-width="2" />
+<circle cx="780.0" cy="345.9708639846789" r="4" fill="#2e86ab" />
+<line x1="780.0" y1="374.4144423493812" x2="780.0" y2="317.5272856199766" stroke="#2e86ab" stroke-width="2" />
+<polyline fill="none" stroke="#2a9d8f" stroke-width="3" points="90.0,387.49865222511835 228.0,403.1664566941654 366.0,391.95387567379566 504.0,374.8118834224 642.0,386.69263117742406 780.0,383.25796918283487" />
+<circle cx="90.0" cy="387.49865222511835" r="4" fill="#2a9d8f" />
+<line x1="90.0" y1="403.4430059885535" x2="90.0" y2="371.5542984616832" stroke="#2a9d8f" stroke-width="2" />
+<circle cx="228.0" cy="403.1664566941654" r="4" fill="#2a9d8f" />
+<line x1="228.0" y1="429.768510708097" x2="228.0" y2="376.5644026802338" stroke="#2a9d8f" stroke-width="2" />
+<circle cx="366.0" cy="391.95387567379566" r="4" fill="#2a9d8f" />
+<line x1="366.0" y1="430.94019504793255" x2="366.0" y2="352.9675562996587" stroke="#2a9d8f" stroke-width="2" />
+<circle cx="504.0" cy="374.8118834224" r="4" fill="#2a9d8f" />
+<line x1="504.0" y1="381.87890770748163" x2="504.0" y2="367.7448591373183" stroke="#2a9d8f" stroke-width="2" />
+<circle cx="642.0" cy="386.69263117742406" r="4" fill="#2a9d8f" />
+<line x1="642.0" y1="410.3182095653267" x2="642.0" y2="363.0670527895214" stroke="#2a9d8f" stroke-width="2" />
+<circle cx="780.0" cy="383.25796918283487" r="4" fill="#2a9d8f" />
+<line x1="780.0" y1="403.8782085367726" x2="780.0" y2="362.63772982889714" stroke="#2a9d8f" stroke-width="2" />
+<line x1="690" y1="76" x2="708" y2="76" stroke="#d1495b" stroke-width="3" />
+<circle cx="699" cy="76" r="4" fill="#d1495b" />
+<text x="716" y="80" class="small">PGA</text>
+<line x1="690" y1="100" x2="708" y2="100" stroke="#2e86ab" stroke-width="3" />
+<circle cx="699" cy="100" r="4" fill="#2e86ab" />
+<text x="716" y="104" class="small">GAFT</text>
+<line x1="690" y1="124" x2="708" y2="124" stroke="#2a9d8f" stroke-width="3" />
+<circle cx="699" cy="124" r="4" fill="#2a9d8f" />
+<text x="716" y="128" class="small">IDK</text>
+</svg>

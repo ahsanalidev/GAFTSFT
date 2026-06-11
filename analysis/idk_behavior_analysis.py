@@ -11,7 +11,18 @@ from statistics import mean
 
 ROOT = Path(__file__).resolve().parents[1]
 MODELS = ["LLaMa-3.2-8B", "LLaMa-3.2-1B"]
+# The seeded results live under one of these per-model subdirectories. The
+# folder was renamed from "results_with_seed" to "results"; accept either.
+RESULTS_DIR_NAMES = ["results_with_seed", "results"]
 RANDOM_SEED = 7
+
+
+def resolve_results_dir(model_dir):
+    for name in RESULTS_DIR_NAMES:
+        candidate = model_dir / name
+        if candidate.exists():
+            return candidate
+    return None
 
 CATEGORY_ORDER = [
     "clean_abstention",
@@ -44,6 +55,12 @@ ABSTENTION_PATTERNS = [
     r"\bi do not have access\b",
     r"\bi don't have access\b",
 ]
+
+# Combined alternation used to split an output on its abstention phrase so we can
+# inspect any trailing content. Built from the canonical patterns above so it
+# stays consistent with looks_like_abstention(); the patterns use only
+# non-capturing groups, so re.split does not emit the delimiter itself.
+ABSTENTION_SPLIT_PATTERN = "|".join(ABSTENTION_PATTERNS)
 
 EOS_LIKE_TOKENS = {
     "",
@@ -177,7 +194,7 @@ def classify_output(question, reference_output, generated):
         reason = "empty, malformed, or eos-like output"
     elif has_abstention:
         content_after = re.split(
-            r"(?:i do not have(?: that| this| enough)? information|i don't have(?: that| this| enough)? information|i do not know|i don't know|i cannot answer|i can't answer|i am not able to answ[...]",
+            ABSTENTION_SPLIT_PATTERN,
             norm,
             flags=re.IGNORECASE,
             maxsplit=1,
@@ -539,16 +556,16 @@ def analyze_model(model, output_dir):
     print(f"{'='*70}")
     
     model_dir = ROOT / model
-    results_with_seed_dir = model_dir / "results_with_seed"
-    
-    if not results_with_seed_dir.exists():
-        print(f"⚠️  results_with_seed directory not found: {results_with_seed_dir}")
+    results_dir = resolve_results_dir(model_dir)
+
+    if results_dir is None:
+        print(f"⚠️  results directory not found under {model_dir} (looked for {RESULTS_DIR_NAMES})")
         return False
-    
+
     # Find all IDKTuning_seed_* directories
-    seed_dirs = sorted(results_with_seed_dir.glob("IDKTuning_seed_*"))
+    seed_dirs = sorted(results_dir.glob("IDKTuning_seed_*"))
     if not seed_dirs:
-        print(f"⚠️  No IDKTuning seed directories found in {results_with_seed_dir}")
+        print(f"⚠️  No IDKTuning seed directories found in {results_dir}")
         return False
     
     seed_files = {}

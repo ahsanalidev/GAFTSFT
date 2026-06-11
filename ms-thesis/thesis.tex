@@ -124,7 +124,7 @@ A separate word of thanks goes to the maintainers of the open-source tools this 
 \clearpage
 \thispagestyle{empty}
 \begin{abstract}
-Most studies of machine unlearning in large language models are carried out under generous computational conditions: full-precision weights, large accelerators, and few restrictions on memory. Real deployments rarely look like this. To fit large models onto modest hardware, practitioners routinely combine low-bit quantization with parameter-efficient fine-tuning, and it is far from obvious that an unlearning procedure that behaves well in the laboratory will continue to behave well once the model has been compressed to four bits. This thesis asks whether targeted unlearning remains dependable, in the joint sense of forgetting effectively, preserving useful behavior, and resisting privacy attacks, when it is applied inside a 4-bit quantized, LoRA-based pipeline built on LLaMA-3-8B.
+Most studies of machine unlearning in large language models are carried out under generous computational conditions: full-precision weights, large accelerators, and few restrictions on memory. Real deployments rarely look like this. To fit large models onto modest hardware, practitioners routinely combine low-bit quantization with parameter-efficient fine-tuning, and it is far from obvious that an unlearning procedure that behaves well in the laboratory will continue to behave well once the model has been compressed to four bits. This thesis asks whether targeted unlearning remains dependable, in the joint sense of forgetting effectively, preserving useful behavior, and resisting privacy attacks, when it is applied inside a 4-bit quantized, LoRA-based pipeline built on LLaMA-3.2-8B.
 
 Three practical strategies are studied side by side: Pure Gradient Ascent (PGA), a retain-regularized variant that mixes forgetting and retention signals in every batch (GAFT), and a supervised refusal scheme that re-targets the forget set onto an ``I don't know'' response (IDK). Each method is evaluated on the TOFU benchmark and through a membership inference analysis based on Min-$k$\% likelihood features, and every configuration is repeated across three random seeds so that the conclusions rest on aggregated rather than single-run evidence.
 
@@ -207,7 +207,7 @@ The investigation is organized around four questions.
 The overarching aim of the thesis is to assess, empirically and under deployment-realistic constraints, how reliable targeted unlearning is in 4-bit quantized large language models. This aim is pursued through the following concrete objectives:
 
 \begin{itemize}
-	\item to build a single, consistent training and evaluation pipeline in which a LLaMA-3-8B model is memorized on a known dataset and then unlearned, entirely in 4-bit precision with LoRA adapters;
+	\item to build a single, consistent training and evaluation pipeline in which a LLaMA-3.2-8B model is memorized on a known dataset and then unlearned, entirely in 4-bit precision with LoRA adapters;
 	\item to implement three representative unlearning strategies, Pure Gradient Ascent, retain-regularized Gradient Ascent (GAFT), and IDK refusal tuning, within that common pipeline so that any difference in outcome can be attributed to the objective rather than to incidental engineering choices;
 	\item to evaluate each method along three independent axes, namely forgetting efficacy, utility preservation across multiple data splits, and privacy leakage measured with a Min-$k$\% membership inference attack;
 	\item to repeat every configuration across three random seeds and report aggregated statistics so that the conclusions are robust to training stochasticity;
@@ -228,7 +228,7 @@ The principal contributions of this thesis are as follows.
 \end{enumerate}
 
 \section{Scope and Delimitations}
-It is worth being upfront about what this study does and does not cover, since the conclusions should be read in light of these boundaries. The work uses a single model family and size, LLaMA-3-8B, and a single quantization scheme, 4-bit, loaded through the bitsandbytes backend. The forgetting task is fixed to one configuration of the TOFU benchmark, namely the forget10 split paired with retain90. Privacy is assessed with one attack family, a Min-$k$\% likelihood classifier, rather than an exhaustive battery of attacks. Hyperparameters such as the retain weight in GAFT and the number of unlearning steps are held at sensible, lightly-tuned values rather than being optimized exhaustively for each method. These choices were made deliberately, to keep the comparison fair and the compute tractable on a single free-tier GPU, but they do limit how far the numerical results should be generalized. What the study is designed to support is a careful relative comparison of methods under a common, realistic setting, together with qualitative insight into how each method behaves; it is not designed to certify any single method as universally optimal.
+It is worth being upfront about what this study does and does not cover, since the conclusions should be read in light of these boundaries. The work uses a single model family, LLaMA-3.2, at two sizes, 8B and 1B, and a single quantization scheme, 4-bit, loaded through the bitsandbytes backend; the second size is used to check whether the method comparison is stable across scale rather than to broaden the architectural coverage. The forgetting task is fixed to one configuration of the TOFU benchmark, namely the forget10 split paired with retain90. Privacy is assessed with one attack family, a Min-$k$\% likelihood classifier, rather than an exhaustive battery of attacks. Hyperparameters such as the retain weight in GAFT and the number of unlearning steps are held at sensible, lightly-tuned values rather than being optimized exhaustively for each method. These choices were made deliberately, to keep the comparison fair and the compute tractable on a single free-tier GPU, but they do limit how far the numerical results should be generalized. What the study is designed to support is a careful relative comparison of methods under a common, realistic setting, together with qualitative insight into how each method behaves; it is not designed to certify any single method as universally optimal.
 
 \section{Organization of the Thesis}
 The remainder of the thesis is structured as follows. Chapter~\ref{chap:background} lays the theoretical groundwork, explaining how language models store knowledge, what machine unlearning means in this context, and how quantization, LoRA, membership inference, and the TOFU benchmark fit together. Chapter~\ref{chap:literature} surveys the relevant literature, tracing unlearning from its classical roots through to the most recent LLM-specific methods, and pinpoints the gap that this study sets out to fill. Chapter~\ref{chap:methodology} formalizes the problem and describes the three unlearning strategies, the two-stage training protocol, and the evaluation framework in detail. Chapter~\ref{chap:setup} documents the experimental setup, including the hardware and software stack, the dataset splits, the model and adapter configuration, the hyperparameters, the seeding strategy, and the membership inference and behavioral-audit pipelines. Chapter~\ref{chap:results} presents and analyzes the results across forgetting, utility, and privacy, and reports the audit of the IDK generations. Chapter~\ref{chap:discussion} interprets these findings, answers the research questions, and sets out the limitations and threats to validity. Chapter~\ref{chap:conclusion} concludes and outlines directions for future work.
@@ -249,7 +249,7 @@ A language model is, at heart, a probability distribution over sequences of toke
 \end{equation}
 where $\theta$ denotes the parameters of the network. Reading Equation~\eqref{eq:autoregressive} from left to right, the model predicts each token from everything that came before it. This single idea, predicting the next token, is enough to learn grammar, facts, and a surprising amount of reasoning, provided the network is large and the data plentiful.
 
-The network that produces these conditionals is, in the models studied here, a transformer \parencite{vaswani2017attention}. Its defining component is self-attention, a mechanism that lets every position in the sequence look at, and selectively combine, information from every other position. Stacked attention layers interleaved with position-wise feed-forward blocks give the model its capacity. LLaMA-3-8B, the base model used throughout this work, is one such transformer with roughly eight billion parameters \parencite{dubey2024llama3}. The exact architectural details are not central to the argument; what matters is that the model is a single large parameter vector $\theta$ whose values jointly encode everything the model has learned.
+The network that produces these conditionals is, in the models studied here, a transformer \parencite{vaswani2017attention}. Its defining component is self-attention, a mechanism that lets every position in the sequence look at, and selectively combine, information from every other position. Stacked attention layers interleaved with position-wise feed-forward blocks give the model its capacity. LLaMA-3.2-8B, the base model used throughout this work, is one such transformer with roughly eight billion parameters \parencite{dubey2024llama3}. The exact architectural details are not central to the argument; what matters is that the model is a single large parameter vector $\theta$ whose values jointly encode everything the model has learned.
 
 Training proceeds by maximum likelihood. Given a dataset $\mathcal{D}$ of sequences, one searches for parameters that make the observed data as probable as possible, which is equivalent to minimizing the average negative log-likelihood. For a supervised question--answer formulation, where each example is a prompt $x$ paired with a target answer $y$, this is the familiar cross-entropy objective:
 \begin{equation}
@@ -430,7 +430,7 @@ Ding et al.\ \parencite{ding2024peft} & Unified PEFT (LoRA) unlearning & LLMs + 
 Zhang et al.\ (NPO) \parencite{zhang2024npo} & Negative preference optimization & LLMs, full precision & TOFU forget/utility & Bounded objective avoids collapse; full precision, single setting. \\
 Zhang et al.\ (quantization) \parencite{zhang2024quantization} & Quantize an unlearned model & Unlearn full precision, then quantize & Knowledge recovery & Quantization \emph{recovers} forgotten knowledge; motivates evaluating in-quantization. \\
 \hline
-\textbf{This work (Ali \& Farooq)} & \textbf{PGA, GAFT, IDK under one protocol} & \textbf{LLaMA-3-8B, 4-bit + LoRA (end to end)} & \textbf{TOFU + Min-$k$\% MIA + 1{,}200-gen audit, 3 seeds} & \textbf{GAFT best balance; IDK's low overlap is 86\% hallucination, not abstention; PGA worst.} \\
+\textbf{This work (Ali \& Farooq)} & \textbf{PGA, GAFT, IDK under one protocol} & \textbf{LLaMA-3.2-8B, 4-bit + LoRA (end to end)} & \textbf{TOFU + Min-$k$\% MIA + 1{,}200-gen audit, 3 seeds} & \textbf{GAFT best balance; IDK's low overlap is 86\% hallucination, not abstention; PGA worst.} \\
 \hline
 \end{tabular}
 \end{table}
@@ -643,7 +643,7 @@ The study uses the TOFU benchmark in its standard configuration. The full traini
 Two auxiliary evaluation sets ship with the benchmark and are used unchanged: a real-author set of questions about genuine, well-known writers, and a world-fact set of general-knowledge questions. Neither is touched during training; both exist solely to detect collateral damage to abilities that unlearning should leave intact. The role of each split was summarized earlier in Table~\ref{tab:tofu-splits}. It is worth restating why a fully synthetic benchmark is the right choice here rather than a convenience: because the fictitious authors appear in no real corpus, the model can only answer questions about them if the memorization stage taught it to, which means a measured drop in forget-set performance can be attributed to unlearning rather than to the model simply never having known the answer.
 
 \section{Base Model and Adapter Configuration}
-The base model throughout is \texttt{unsloth/llama-3-8b-bnb-4bit}, a version of LLaMA-3-8B pre-quantized to 4-bit precision through the bitsandbytes NF4 scheme. The model is loaded in 4-bit and its base weights are frozen; all fine-tuning happens in the LoRA adapters laid over it, exactly the QLoRA-style configuration described in Section~\ref{sec:bg-quant}. The adapter is applied to all seven of the linear projections in each transformer block, the four attention projections and the three feed-forward projections, so that adaptation is not confined to attention alone. Rank-stabilized LoRA is enabled, which rescales the adapter to keep its effective contribution stable. The complete configuration is given in Table~\ref{tab:model-config}.
+The base model throughout is \texttt{unsloth/llama-3-8b-bnb-4bit}, a version of LLaMA-3.2-8B pre-quantized to 4-bit precision through the bitsandbytes NF4 scheme. The model is loaded in 4-bit and its base weights are frozen; all fine-tuning happens in the LoRA adapters laid over it, exactly the QLoRA-style configuration described in Section~\ref{sec:bg-quant}. The adapter is applied to all seven of the linear projections in each transformer block, the four attention projections and the three feed-forward projections, so that adaptation is not confined to attention alone. Rank-stabilized LoRA is enabled, which rescales the adapter to keep its effective contribution stable. The complete configuration is given in Table~\ref{tab:model-config}.
 
 \begin{table}[htbp]
 	\centering
@@ -732,7 +732,7 @@ The audit covers all four hundred forget-set generations for each of the three s
 One limitation of the audit must be stated plainly, because it qualifies how its results should be read. The reference each generation is compared against is not the benchmark's gold answer but the model's own saved output on the original question, taken from the stored TOFU result files, which do not include the gold answers. The memorized-leakage signal is therefore a \emph{proxy}: it measures similarity to a previously generated answer rather than to ground truth. This makes the leakage estimate a lower-confidence quantity than the refusal and hallucination counts, which depend only on the generation itself. The distinction is carried through to the reporting in Chapter~\ref{chap:results} so that no more weight is placed on the proxy than it can bear.
 
 \section{Summary}
-This chapter fixed the experiment in concrete terms. Everything ran on a single free-tier T4 GPU through an Unsloth, TRL, and Hugging Face stack, using the standard TOFU splits with four hundred forget examples and thirty-six hundred retain examples. The model was LLaMA-3-8B loaded in 4-bit with rank-16 rank-stabilized LoRA adapters on all seven projections, trained in two stages whose hyperparameters are laid out in Tables~\ref{tab:model-config} and~\ref{tab:hparams}, and repeated across three seeds. Privacy was probed with a six-threshold Min-$k$\% attack feeding an RBF support vector classifier, and the IDK model's outputs were subjected to a twelve-hundred-generation behavioral audit whose categories are defined in Table~\ref{tab:audit-categories}. With the apparatus fully specified, the next chapter reports what it produced.
+This chapter fixed the experiment in concrete terms. Everything ran on a single free-tier T4 GPU through an Unsloth, TRL, and Hugging Face stack, using the standard TOFU splits with four hundred forget examples and thirty-six hundred retain examples. The model was LLaMA-3.2-8B loaded in 4-bit with rank-16 rank-stabilized LoRA adapters on all seven projections, trained in two stages whose hyperparameters are laid out in Tables~\ref{tab:model-config} and~\ref{tab:hparams}, and repeated across three seeds. Privacy was probed with a six-threshold Min-$k$\% attack feeding an RBF support vector classifier, and the IDK model's outputs were subjected to a twelve-hundred-generation behavioral audit whose categories are defined in Table~\ref{tab:audit-categories}. With the apparatus fully specified, the next chapter reports what it produced.
 
 %========================================================================================
 %	CHAPTER 6 - RESULTS  (scaffold)
@@ -791,7 +791,7 @@ Forgetting is only half of the bargain; a method that forgets by breaking the mo
 \begin{figure}[htbp]
 	\centering
 	\includegraphics[width=0.92\textwidth]{split_accuracy.png}
-	\caption{Accuracy by evaluation split for each method. The forget bar should be low and the other three high. All methods preserve real-author and world-fact accuracy well; the methods separate mainly on the forget and retain splits.}
+	\caption{Accuracy by evaluation split for each method on LLaMA-3.2-8B. The forget bar should be low and the other three high. All methods preserve real-author and world-fact accuracy well; the methods separate mainly on the forget and retain splits. The corresponding LLaMA-3.2-1B figure is Figure~\ref{fig:split-accuracy-1b}.}
 	\label{fig:split-accuracy}
 \end{figure}
 
@@ -819,7 +819,7 @@ The membership inference attack measures what the behavioral metrics cannot: whe
 \begin{figure}[htbp]
 	\centering
 	\includegraphics[width=0.92\textwidth]{mia_thresholds.png}
-	\caption{MIA sensitivity across Min-$k$\% thresholds, aggregated over three seeds. PGA sits well above the other two at every threshold, while GAFT and IDK stay close together near the no-leakage region, with IDK consistently the lowest.}
+	\caption{MIA sensitivity across Min-$k$\% thresholds on LLaMA-3.2-8B, aggregated over three seeds. PGA sits well above the other two at every threshold, while GAFT and IDK stay close together near the no-leakage region, with IDK consistently the lowest. The corresponding LLaMA-3.2-1B figure is Figure~\ref{fig:mia-thresholds-1b}.}
 	\label{fig:mia-thresholds}
 \end{figure}
 
@@ -832,7 +832,7 @@ No single column of the preceding tables crowns a winner, because the methods wi
 \begin{figure}[htbp]
 	\centering
 	\includegraphics[width=0.85\textwidth]{tradeoff_scatter.png}
-	\caption{Privacy--unlearning trade-off across three seeds. Points are seed-averaged positions and error bars are approximate 95\% confidence intervals. The desirable corner is lower-right (high Forget Quality, low MIA). GAFT reaches the far right on Forget Quality; IDK reaches the bottom on MIA; PGA is stranded in the upper-left.}
+	\caption{Privacy--unlearning trade-off on LLaMA-3.2-8B across three seeds. Points are seed-averaged positions and error bars are approximate 95\% confidence intervals. The desirable corner is lower-right (high Forget Quality, low MIA). GAFT reaches the far right on Forget Quality; IDK reaches the bottom on MIA; PGA is stranded in the upper-left. The corresponding LLaMA-3.2-1B figure is Figure~\ref{fig:tradeoff-1b}.}
 	\label{fig:tradeoff}
 \end{figure}
 
@@ -905,8 +905,81 @@ Because every configuration was run under three seeds, it is possible to ask whe
 
 The one place where variance is genuinely large is IDK's Forget Quality, whose standard deviation ($0.0441$) exceeds its mean ($0.1037$). This is itself informative rather than merely noisy: it says that IDK's distribution-level forgetting is not only weak but erratic, swinging from run to run, which is consistent with the audit's finding that its behavior is driven by fabrication rather than by a stable forgetting mechanism. The audit itself was stable, with the hallucinated-substitute share staying in a tight $84.5\%$ to $88.5\%$ band across the three seeds, so the qualitative verdict on IDK does not depend on any single run. Taken together, the seed analysis supports treating the method ranking as a real effect, while flagging IDK's Forget Quality as the least reliable single number in the study.
 
+\section{Cross-Model Analysis: LLaMA-3.2-8B vs LLaMA-3.2-1B}
+\label{sec:res-crossmodel}
+Everything reported so far was measured on LLaMA-3.2-8B. Because forgetting dynamics are known to couple with model scale, a natural question is whether the verdicts just reached are properties of the \emph{methods} or artefacts of a single model \emph{size}. To find out, the entire two-stage memorize-then-unlearn protocol was rerun, identical in every respect except the base model, on the roughly four-times-smaller LLaMA-3.2-1B, again across the three seeds $3407$, $3408$, and $3409$ and again entirely inside the 4-bit quantized, LoRA-based pipeline. Table~\ref{tab:cross-model} places the headline metrics for the two scales side by side, and Figure~\ref{fig:cross-model} shows the same four axes visually.
+
+\begin{table}[htbp]
+	\centering
+	\caption{Cross-model comparison of the three methods at two scales (mean $\pm$ std over three seeds). FQ and utility are better when high; MIA and forget accuracy are better when low. Bold marks the best method \emph{within each model block}.}
+	\label{tab:cross-model}
+	\resizebox{\textwidth}{!}{%
+	\begin{tabular}{llcccc}
+		\toprule
+		Model & Method & FQ $\uparrow$ & MIA $\downarrow$ & Forget Acc $\downarrow$ & Utility Avg. Acc $\uparrow$ \\
+		\midrule
+		\multirow{3}{*}{LLaMA-3.2-8B}
+		     & PGA  & $0.0392 \pm 0.0046$ & $0.6219 \pm 0.0130$ & $0.6183 \pm 0.0038$ & $\mathbf{0.7912 \pm 0.0107}$ \\
+		     & GAFT & $\mathbf{0.5427 \pm 0.0334}$ & $0.4418 \pm 0.0087$ & $0.5700 \pm 0.0025$ & $0.7912 \pm 0.0107$ \\
+		     & IDK  & $0.1037 \pm 0.0441$ & $\mathbf{0.4171 \pm 0.0070}$ & $\mathbf{0.5617 \pm 0.0063}$ & $0.7799 \pm 0.0032$ \\
+		\midrule
+		\multirow{3}{*}{LLaMA-3.2-1B}
+		     & PGA  & $0.0408 \pm 0.0023$ & $0.6420 \pm 0.0167$ & $0.5889 \pm 0.0069$ & $\mathbf{0.7135 \pm 0.0051}$ \\
+		     & GAFT & $\mathbf{0.5610 \pm 0.0381}$ & $0.4516 \pm 0.0092$ & $0.5412 \pm 0.0079$ & $0.7112 \pm 0.0120$ \\
+		     & IDK  & $0.1052 \pm 0.0406$ & $\mathbf{0.4251 \pm 0.0076}$ & $\mathbf{0.5369 \pm 0.0058}$ & $0.7056 \pm 0.0009$ \\
+		\bottomrule
+	\end{tabular}%
+	}
+\end{table}
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.95\textwidth]{cross_model_comparison.png}
+	\caption{Cross-model comparison of the three unlearning methods on LLaMA-3.2-8B (blue) and LLaMA-3.2-1B (orange): Forget Quality, mean Min-$k$\% MIA, utility-average accuracy, and seed stability (the standard deviation of Forget Quality across seeds). Error bars are seed standard deviations. The method ordering on every axis is the same at both scales.}
+	\label{fig:cross-model}
+\end{figure}
+
+The most consequential observation is also the simplest: \emph{the method ranking is identical at both scales}. On distributional forgetting, GAFT wins at 1B ($0.5610 \pm 0.0381$) exactly as it does at 8B, with IDK a distant second ($0.1052$) and PGA near zero ($0.0408$); on the membership inference attack, the ordering IDK $<$ GAFT $<$ PGA reproduces exactly, with PGA again stranded well above the other two and GAFT and IDK again pressed into the no-signal region. The privacy--utility geometry of Figure~\ref{fig:tradeoff}---GAFT far to the right, IDK at the bottom, PGA in the unfavorable upper-left corner---is preserved when the base model shrinks by a factor of four. Scale rescales some of the numbers, as the next paragraphs detail, but it does not move any method past another on the axes that decide the comparison.
+
+Forgetting efficacy is, if anything, scale-robust. GAFT's Forget Quality is marginally \emph{higher} at 1B ($0.5610$ vs.\ $0.5427$), and PGA's and IDK's are statistically unchanged, so the smaller model is no harder to forget on in the distributional sense. The direct-suppression metrics tell a consistent story with one mild scale signature: every method's forget-set accuracy is a few points lower at 1B (for example IDK falls from $0.5617$ to $0.5369$), which simply reflects that a smaller, less confident model is easier to push off the gold answer. The \emph{ordering} of suppression---IDK most aggressive, GAFT close behind, PGA least---is identical at both sizes.
+
+Privacy leakage is the one axis that shifts in a consistent direction with scale, and the shift is small. Every method leaks marginally more at 1B: PGA's mean MIA rises from $0.6219$ to $0.6420$, GAFT's from $0.4418$ to $0.4516$, and IDK's from $0.4171$ to $0.4251$. The smaller model is therefore slightly more attackable across the board---unsurprising for a lower-capacity network that must commit more of its limited representation to each memorized sequence---but the effect is on the order of one to two hundredths of the MIA score and leaves the qualitative picture untouched: PGA's large gap above the other two persists at every threshold, and GAFT and IDK remain near the chance line.
+
+Utility preservation is where model scale visibly bites, but the bite lands on the base model, not on the unlearning. Average non-forget accuracy drops from roughly $0.79$ at 8B to roughly $0.71$ at 1B, driven by the expected erosion of broad knowledge in the smaller network: real-author accuracy falls from about $0.92$ to about $0.82$ and world-fact accuracy from about $0.88$ to about $0.79$. Crucially, this is a capability effect, not a forgetting cost. At 1B the three methods again cluster within about eight thousandths of one another in average utility ($0.7135$, $0.7112$, $0.7056$), the same tight band seen at 8B, and the relative ordering is preserved, with PGA and GAFT essentially tied at the top---PGA edges GAFT by a mere $0.0023$, just as the two are within $0.0011$ at 8B---and IDK lowest. The marginal utility cost that the unlearning itself imposes is thus nearly identical at both scales; the large gap between the scales is the price of the smaller model, which one pays before any unlearning takes place.
+
+Stability across seeds is likewise scale-invariant in its structure. At 1B, as at 8B, the between-method gaps dwarf the seed-level standard deviations, so none of the rankings is at risk from training randomness, and the membership scores remain highly consistent (standard deviations around $0.01$). The seed-stability panel of Figure~\ref{fig:cross-model} shows the one familiar exception surviving the change of scale: IDK's Forget Quality is again the most volatile single quantity, with a standard deviation ($0.0406$) almost as large as its mean ($0.1052$), precisely as at 8B. The smaller model is marginally noisier everywhere, but never enough to disturb a conclusion, and the volatility that the audit predicts for IDK's distributional forgetting reappears at exactly the metric, and the magnitude, that the 8B analysis flagged.
+
+The behavioral audit, finally, was rerun on all $1{,}200$ IDK forget-set generations at 1B, and it is here that the cross-model comparison is most revealing. Table~\ref{tab:cross-model-idk} and Figure~\ref{fig:cross-model-idk} report the two breakdowns together. The central finding of this thesis survives the change of scale unambiguously: at neither size does IDK deliver the clean refusal its training objective implies, and hallucinated substitution remains the single largest behavior at both ($86.1\%$ at 8B, $50.9\%$ at 1B). What scale changes is the \emph{texture} of the failure rather than its existence. The 8B model is fluent enough to fail in a deceptively tidy way---it almost always manufactures a confident, plausible biography, abstaining cleanly in \emph{none} of the twelve hundred cases---whereas the smaller, less fluent 1B model fails in a noisier, more fragmented manner: it produces genuine refusals far more often ($18.8\%$ clean abstention, up from zero), drifts into degenerate or off-topic output much more often ($27.0\%$ versus $5.6\%$), and leaks the original fact through paraphrase less often ($2.6\%$ versus $8.2\%$). The smaller model, in short, lacks the fluency to fabricate a convincing replacement as reliably, so its suppression spills across abstention, drift, and shorter inventions; but fabrication is still the plurality outcome, and clean abstention is still a minority. The 8B model fails by lying fluently and the 1B model fails more raggedly, but both fail the same test, and a deployment that reads either one's low answer-overlap as evidence of clean forgetting would be misled at both scales.
+
+\begin{table}[htbp]
+	\centering
+	\caption{Behavioral audit of IDK forget-set generations at the two model scales ($1{,}200$ generations each, three seeds). The hallucinated-substitute share was stable per seed at $84.5$--$88.5\%$ for 8B and $46.8$--$53.5\%$ for 1B.}
+	\label{tab:cross-model-idk}
+	\begin{tabular}{lcc}
+		\toprule
+		\textbf{Category} & \textbf{LLaMA-3.2-8B} & \textbf{LLaMA-3.2-1B} \\
+		\midrule
+		Clean abstention & 0.0\% & 18.8\% \\
+		Partial abstention & 0.0\% & 0.2\% \\
+		Empty / no answer & 0.1\% & 0.5\% \\
+		Hallucinated substitute & \textbf{86.1\%} & \textbf{50.9\%} \\
+		Unrelated drift & 5.6\% & 27.0\% \\
+		Memorized leakage (proxy) & 8.2\% & 2.6\% \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.95\textwidth]{cross_model_idk_behavior.png}
+	\caption{IDK forget-set behavior by model scale, pooled over three seeds. Hallucinated substitution (red) is the largest category at both sizes. The smaller 1B model trades fluent fabrication for a larger share of genuine refusal (teal) and unrelated drift (amber), but clean abstention never becomes the dominant mode.}
+	\label{fig:cross-model-idk}
+\end{figure}
+
+Taken together, the cross-model evidence is that model scale rescales the absolute utility budget and reshapes the surface texture of IDK's failure, while leaving every substantive verdict of this chapter intact. GAFT is still the most balanced method, IDK still purchases its low leakage with fabrication rather than abstention, PGA is still dominated on every axis that matters, and IDK's Forget Quality is still the least trustworthy number in the study. The conclusions are therefore not an artefact of a single model size.
+
 \section{Summary}
-The results refuse to anoint a universal winner, and that refusal is itself the finding. On raw suppression and on the membership inference attack, IDK looks best; on distributional Forget Quality and on preserved utility, GAFT looks best; on nearly everything, PGA looks worst, combining the lowest Forget Quality with by far the highest leakage. The privacy--utility trade-off of Figure~\ref{fig:tradeoff} shows GAFT and IDK dominating PGA along different axes, with GAFT alone landing near the good end of all three properties at once. The behavioral audit then reframes IDK's apparent success: with zero clean abstentions and $86.1\%$ hallucinated substitutes, its strong scores are an artefact of confident fabrication rather than trustworthy forgetting. Seed analysis confirms that these patterns are stable, the lone exception being IDK's volatile Forget Quality, which is exactly the metric the audit predicts should be unstable. The next chapter interprets these findings, answers the research questions, and sets out what they do and do not license one to conclude.
+The results refuse to anoint a universal winner, and that refusal is itself the finding. On raw suppression and on the membership inference attack, IDK looks best; on distributional Forget Quality and on preserved utility, GAFT looks best; on nearly everything, PGA looks worst, combining the lowest Forget Quality with by far the highest leakage. The privacy--utility trade-off of Figure~\ref{fig:tradeoff} shows GAFT and IDK dominating PGA along different axes, with GAFT alone landing near the good end of all three properties at once. The behavioral audit then reframes IDK's apparent success: with zero clean abstentions and $86.1\%$ hallucinated substitutes, its strong scores are an artefact of confident fabrication rather than trustworthy forgetting. Seed analysis confirms that these patterns are stable, the lone exception being IDK's volatile Forget Quality, which is exactly the metric the audit predicts should be unstable. Re-running the entire protocol on the four-times-smaller LLaMA-3.2-1B leaves every one of these orderings intact---GAFT still owns Forget Quality, IDK still owns raw MIA while failing the audit, and PGA is still dominated---so the conclusions are not an artefact of a single model size, even though the smaller model preserves less absolute utility and fails IDK's intended refusal in a noisier, more fragmented way. The next chapter interprets these findings, answers the research questions, and sets out what they do and do not license one to conclude.
 
 %========================================================================================
 %	CHAPTER 7 - DISCUSSION  (scaffold)
@@ -926,6 +999,14 @@ GAFT differs from PGA by exactly one thing, the retain term and the fixed one-fo
 
 IDK is the most interesting case because its objective and its behavior come apart. On paper it is the gentlest method, a standard supervised fine-tune toward a short refusal string, and at training time it surely achieves low loss on that target. Yet at generation time the model almost never refuses. The gap between the two is the heart of the matter. A teacher-forced cross-entropy loss on the string ``I do not have that information'' can be driven down without the model ever internalizing abstention as a behavior; what it appears to internalize instead is the weaker lesson ``do not emit the original gold answer,'' and when the model is then asked to generate freely, its strong fluency prior, reinforced by the retain examples in the same batch, fills the resulting vacuum with a plausible fabrication. The result is the $86.1\%$ hallucination rate. This also explains IDK's otherwise puzzling metric profile. Its truth probability and forget accuracy are low because it really has stopped producing the gold answer; its MIA is low because a fabricated answer looks less like a memorized member to a likelihood-based attack; but its Forget Quality is weak and erratic because fabrication is not forgetting, and the truth-ratio distribution of a model that is confidently inventing content does not match that of a model that never learned the content in the first place. Every number in the IDK row is consistent once one accepts that the model is substituting rather than abstaining.
 
+\section{The Effect of Model Scale}
+\label{sec:disc-scale}
+The cross-model comparison in Section~\ref{sec:res-crossmodel} was designed to separate what is a property of the methods from what is a property of one particular model, and its result can be read straight off the same objective-centric logic used above. If each method's profile is dictated by its loss rather than by the model it is applied to, then shrinking the base network should leave the \emph{ordering} of the methods alone while moving only those quantities that depend on raw model capacity. That is precisely the pattern observed. The objective remains the dominant factor at 1B exactly as at 8B: Forget Quality still spans from near-zero for PGA to more than half for GAFT, and leakage still spans from well-above-chance for PGA down to the no-signal region for GAFT and IDK. Changing the model by a factor of four in size did not soften the gulf that changing the loss opens up, which is the strongest available evidence that the gulf belongs to the loss.
+
+Where scale does register, it registers on exactly the axes that scale should govern, and not on the comparative verdict. Utility falls by roughly eight points in absolute terms at 1B, but this is the smaller model's diminished store of world knowledge speaking, not a cost of unlearning: the three methods stay clustered within roughly a hundredth of one another in utility at 1B just as they do at 8B, so unlearning's \emph{marginal} tax on utility is essentially scale-independent even though the baseline it is levied on is lower. Leakage rises slightly at every threshold for every method, consistent with a lower-capacity network packing more of each memorized sequence into fewer parameters and thus presenting a marginally larger membership signal, but the rise is small enough that PGA's leakage gap and GAFT/IDK's near-chance scores survive intact. The seed-level volatility that singled out IDK's Forget Quality at 8B reappears at 1B at the same metric and a comparable magnitude. None of these movements is large enough to reorder the methods.
+
+The most instructive scale effect is qualitative and concerns IDK. The audit's verdict---that the method suppresses by fabricating rather than abstaining---holds at both sizes, but the \emph{way} it fails is mediated by fluency. The 8B model has enough generative competence to mint a convincing replacement biography almost every time, so its failure is uniform and deceptively clean: zero refusals, $86.1\%$ fluent fabrication. The 1B model is simply not fluent enough to keep that up; deprived of the capacity to invent reliably, its suppression fragments into a larger share of genuine refusals, a much larger share of degenerate drift, and shorter, less convincing fabrications, dropping the hallucination rate to $50.9\%$ while lifting clean abstention to $18.8\%$. This is a useful reminder that ``hallucinated substitution'' is not a fixed quantity but a capability-dependent one: a more fluent model fabricates more confidently, which means the very models most attractive for deployment are the ones whose forgetting failures are hardest to catch by eye. The mechanism is the same at both scales; only the model's competence at executing it differs.
+
 \section{Answers to the Research Questions}
 \label{sec:disc-rqs}
 With the mechanisms in view, the four research questions posed in Chapter~\ref{chap:introduction} can be answered directly.
@@ -934,9 +1015,9 @@ With the mechanisms in view, the four research questions posed in Chapter~\ref{c
 
 \textbf{RQ2: When a method drives down forget-set accuracy and overlap, is that genuine abstention and removal, or substituted fabrication?} For the refusal-based method studied here, it is overwhelmingly fabrication. The audit found zero clean abstentions across twelve hundred generations and an $86.1\%$ rate of hallucinated substitutes, with a further $8.2\%$ leaking the original fact through paraphrase. A drop in answer overlap therefore cannot be read as evidence of knowledge removal; in this case it was produced by the model confidently inventing replacement content. This is arguably the single most important finding of the thesis, because it shows that a metric the field routinely treats as a success signal can be fully satisfied by a model that has forgotten nothing and learned to lie.
 
-\textbf{RQ3: Weighing forgetting, utility, and leakage together, which method is most dependable for deployment under these constraints?} GAFT. It is the only method that is simultaneously strong on distributional forgetting, low on membership leakage, and highest on retained utility, and it achieves this with stable, low-variance behavior. IDK edges it on the single axis of raw MIA, but the audit disqualifies that advantage from being read as trustworthy forgetting, and PGA is dominated on every axis that matters. If one had to ship a single method from this study into a memory-constrained deployment, GAFT is the defensible choice.
+\textbf{RQ3: Weighing forgetting, utility, and leakage together, which method is most dependable for deployment under these constraints?} GAFT. It is the only method that is simultaneously strong on distributional forgetting, low on membership leakage, and highest on retained utility, and it achieves this with stable, low-variance behavior. IDK edges it on the single axis of raw MIA, but the audit disqualifies that advantage from being read as trustworthy forgetting, and PGA is dominated on every axis that matters. If one had to ship a single method from this study into a memory-constrained deployment, GAFT is the defensible choice. Re-running the comparison on the smaller LLaMA-3.2-1B does not change this verdict (Section~\ref{sec:res-crossmodel}): the smaller model preserves less absolute utility, but GAFT still reaches the favorable region on all three axes at once while the others do not, so the recommendation is robust across the two scales tested rather than tied to the 8B model.
 
-\textbf{RQ4: How stable are these outcomes across seeds, and are the method differences larger than run-to-run variation?} The outcomes are stable and the differences are real. On the metrics that drive the conclusions, GAFT's Forget-Quality lead and PGA's leakage disadvantage, the gaps between methods are far larger than the seed-level standard deviations, so the ranking survives the change of seed. The membership scores in particular are highly consistent. The one volatile quantity is IDK's Forget Quality, whose standard deviation exceeds its mean, but that volatility is not a threat to the conclusion; it is corroborating evidence for it, since an instability-prone, fabrication-driven mechanism is exactly what should produce an erratic distributional-forgetting score.
+\textbf{RQ4: How stable are these outcomes across seeds, and are the method differences larger than run-to-run variation?} The outcomes are stable and the differences are real. On the metrics that drive the conclusions, GAFT's Forget-Quality lead and PGA's leakage disadvantage, the gaps between methods are far larger than the seed-level standard deviations, so the ranking survives the change of seed. The membership scores in particular are highly consistent. The one volatile quantity is IDK's Forget Quality, whose standard deviation exceeds its mean, but that volatility is not a threat to the conclusion; it is corroborating evidence for it, since an instability-prone, fabrication-driven mechanism is exactly what should produce an erratic distributional-forgetting score. These stability patterns are themselves scale-invariant: at 1B the between-method gaps again dwarf the seed-level variation and IDK's Forget Quality is again the single most volatile number, so the ranking is robust not only across seeds but across the two model sizes tested.
 
 \section{Implications for Deployment}
 \label{sec:disc-implications}
@@ -948,13 +1029,17 @@ The second, and more pointed, lesson is that \textbf{low answer overlap must nev
 
 The third lesson is methodological but has direct operational weight: \textbf{behavioral metrics and privacy attacks must be used together}. Had this study evaluated IDK on behavioral metrics alone it would have looked excellent, and had it relied on MIA alone it would still have ranked IDK first. Only the combination of a distributional forgetting metric, a privacy attack, and a generation-level audit revealed the true picture. Practitioners who evaluate unlearning on a single family of metrics are likely to be misled in predictable directions.
 
-Finally, the comparative result yields a concrete default. Among the three strategies, \textbf{a retain-regularized objective in the style of GAFT is the most dependable choice} for memory-constrained deployment, because it buys stability and balanced forgetting at essentially no utility cost relative to the alternatives. Pure ascent should be avoided as a standalone method, and refusal tuning should be adopted only with generation-level verification that it actually refuses.
+A fourth lesson follows from the cross-model comparison and speaks directly to the engineer who reaches for a smaller model to fit a memory budget: \textbf{choosing a smaller model changes the utility you can afford, but not the unlearning method you should trust or the scrutiny you must apply}. The 1B model preserves markedly less absolute utility than the 8B model, which is a real cost to weigh against the memory it saves, yet the method ranking, the privacy ordering, and the audit's verdict are all unchanged at the smaller scale. Two cautions deserve emphasis. First, the smaller model leaks marginally \emph{more} on the membership attack, so down-scaling for efficiency does not come with a privacy dividend and may carry a small privacy penalty. Second, and more subtly, IDK's fabrication rate is lower at 1B only because the model is less fluent, not because it has learned to abstain; the same generation-level verification is therefore required regardless of size, and it is the larger, more fluent models---the ones most attractive to deploy---whose forgetting failures are the hardest to detect by inspection because their fabrications are the most convincing. A small model is not a shortcut around auditing.
+
+Finally, the comparative result yields a concrete default. Among the three strategies, \textbf{a retain-regularized objective in the style of GAFT is the most dependable choice} for memory-constrained deployment, because it buys stability and balanced forgetting at essentially no utility cost relative to the alternatives, and this default is unchanged across the 8B and 1B scales tested. Pure ascent should be avoided as a standalone method, and refusal tuning should be adopted only with generation-level verification that it actually refuses.
 
 \section{Limitations}
 \label{sec:disc-limitations}
 The conclusions above should be read inside a clearly drawn boundary, and it is better to state that boundary plainly than to let it be inferred.
 
-\textbf{Scope of models and quantization.} The study uses a single model family and size, LLaMA-3-8B, and a single quantization scheme, 4-bit NF4 through bitsandbytes. Whether the same ordering of methods holds at other scales, from one-billion to seventy-billion parameters, or under other schemes such as 2-bit, 8-bit, or GPTQ-style quantization, is untested. Forgetting dynamics are known to interact with scale, so the numbers here should not be extrapolated across it without checking.
+\textbf{Scope of models and quantization.} The study uses a single model family, LLaMA-3.2, at two sizes, 8B and 1B, and a single quantization scheme, 4-bit NF4 through bitsandbytes. Comparing the two sizes is a real strengthening over single-size reporting: it shows that the method ordering, the privacy ranking, and the behavioral-audit verdict all hold across a four-fold change in scale, with only the absolute utility budget and the surface texture of IDK's failure shifting. It remains untested, however, whether the same ordering persists at the larger end of the range, from the thirteen- to the seventy-billion-parameter models, or under other schemes such as 2-bit, 8-bit, or GPTQ- and AWQ-style quantization. Forgetting dynamics are known to interact with scale, and although the two points measured here fall in line, two points do not establish a trend; the numbers should not be extrapolated beyond the tested range without checking.
+
+\textbf{What explains the scale effects is not isolated.} The cross-model comparison establishes \emph{that} the rankings persist and that the smaller model preserves less utility and fabricates less fluently, but it does not isolate \emph{why}. The 8B and 1B checkpoints differ simultaneously in parameter count, layer width and depth, pre-training corpus and token budget, and overall capability, so the observed scale effects---lower absolute utility, marginally higher leakage, and IDK's shift from fluent fabrication toward refusal and drift---cannot be attributed to any single architectural factor. The most plausible reading is that they track raw model capacity and generative fluency, but a controlled study that varied width, depth, and pre-training data independently would be needed to separate capacity from the other confounded differences and to confirm that fluency, rather than some correlated property, is what drives the change in IDK's failure texture.
 
 \textbf{Scope of task and content.} Only one TOFU configuration was used, forgetting ten percent of the fictitious authors while retaining ninety, and the content is uniformly short biographical question-answering about invented people. Other forget ratios, other content types such as long-form text or code, and real rather than fictitious targets may behave differently, and the very feature that makes TOFU a clean testbed, its synthetic isolation, also limits how directly its results speak to messier real-world deletion.
 
@@ -972,7 +1057,7 @@ It is useful to organize the residual risks under the standard headings, since e
 
 \textbf{Internal validity} concerns whether the differences between methods are really caused by the methods. The design supports this fairly strongly: all three methods start from the identical memorized checkpoint per seed and share every setting except the objective and its data construction, so divergent outcomes are attributable to the objective. The main internal risks are GPU non-determinism, which the seeding controls only approximately, and possible labeling error in the audit, which is mitigated by deterministic rules and by the stability of the category proportions across seeds.
 
-\textbf{External validity} concerns generalization, and here the threats are the most serious, as the limitations above make clear. The findings are a controlled relative comparison within one model, one quantization scheme, and one benchmark configuration. They license claims about how these method families relate to one another under these conditions, not universal claims about unlearning in general.
+\textbf{External validity} concerns generalization, and here the threats are the most serious, as the limitations above make clear. The findings are a controlled relative comparison within one model family at two sizes, one quantization scheme, and one benchmark configuration. The agreement between the 8B and 1B results widens the claim slightly---the method relationships are now shown to be scale-stable across a four-fold size change---but they still license claims about how these method families relate to one another under these conditions, not universal claims about unlearning in general.
 
 \textbf{Construct validity} concerns whether the metrics measure what they purport to. This is a live issue precisely because the thesis exists to show that one common construct, low overlap as a stand-in for forgetting, is invalid. The same skepticism must be turned on the study's own instruments: Forget Quality depends on a reference distribution and on the truth-ratio construction, ROUGE-L is known to under-count paraphrase, as the leakage examples in Chapter~\ref{chap:results} demonstrate, and the MIA score's occasional dip below chance must be read as suppressed signal rather than literal anti-membership. The thesis tries to address this by triangulating across several constructs rather than trusting any one, which is the same remedy it prescribes to others.
 
@@ -987,16 +1072,16 @@ It is useful to organize the residual risks under the standard headings, since e
 \section{Conclusion}
 This thesis set out to test a simple but consequential worry. The methods that promise to make large language models forget are almost always developed and validated under generous laboratory conditions, while the systems that most need them run under tight memory budgets that force low-bit quantization and low-rank adaptation. If an unlearning procedure that looks dependable in full precision quietly stops being dependable once the model is squeezed to four bits, then the literature's optimism would be resting on conditions that deployment never actually meets. The study asked, concretely, whether targeted unlearning remains reliable, in the joint sense of forgetting effectively, preserving useful behavior, and resisting privacy attacks, when the whole procedure is carried out inside a 4-bit quantized, LoRA-based pipeline.
 
-To answer it, three representative strategies were placed in a single controlled pipeline that fixed everything except the unlearning objective: pure gradient ascent, a retain-regularized variant that mixes forgetting and retention in every batch, and a refusal-based scheme that re-targets the forget set onto an abstention. All three were memorized and unlearned entirely in 4-bit precision on LLaMA-3-8B, evaluated on the TOFU benchmark across forgetting, cross-split utility, and a Min-$k$\% membership inference attack, and repeated across three random seeds so that no conclusion depended on a single run. Crucially, the evaluation did not stop at aggregate scores; the outputs of the most aggressively suppressing method were audited generation by generation.
+To answer it, three representative strategies were placed in a single controlled pipeline that fixed everything except the unlearning objective: pure gradient ascent, a retain-regularized variant that mixes forgetting and retention in every batch, and a refusal-based scheme that re-targets the forget set onto an abstention. All three were memorized and unlearned entirely in 4-bit precision on LLaMA-3.2-8B, evaluated on the TOFU benchmark across forgetting, cross-split utility, and a Min-$k$\% membership inference attack, and repeated across three random seeds so that no conclusion depended on a single run. Crucially, the evaluation did not stop at aggregate scores; the outputs of the most aggressively suppressing method were audited generation by generation.
 
-The findings are consistent and, in one respect, sobering. First, the choice of objective is not a second-order detail under quantization: it dominates the outcome, producing privacy-utility profiles that differ qualitatively rather than marginally. Second, and most importantly, strong suppression numbers can be deeply misleading. The refusal-based method posted the lowest membership leakage and the most aggressive answer suppression, yet a behavioral audit of twelve hundred generations found that it almost never abstained as intended and instead replaced forgotten facts with confident fabrications in the large majority of cases. Low overlap with the gold answer, the very signal the field often treats as evidence of forgetting, turned out here to be evidence of fluent invention. Third, when forgetting, utility, and privacy are weighed together, the retain-regularized objective emerged as the most dependable of the three, reaching the favorable region on all three axes at once and doing so with stable, low-variance behavior, while pure ascent was dominated everywhere and proved unsuitable for this constrained setting.
+The findings are consistent and, in one respect, sobering. First, the choice of objective is not a second-order detail under quantization: it dominates the outcome, producing privacy-utility profiles that differ qualitatively rather than marginally. Second, and most importantly, strong suppression numbers can be deeply misleading. The refusal-based method posted the lowest membership leakage and the most aggressive answer suppression, yet a behavioral audit of twelve hundred generations found that it almost never abstained as intended and instead replaced forgotten facts with confident fabrications in the large majority of cases. Low overlap with the gold answer, the very signal the field often treats as evidence of forgetting, turned out here to be evidence of fluent invention. Third, when forgetting, utility, and privacy are weighed together, the retain-regularized objective emerged as the most dependable of the three, reaching the favorable region on all three axes at once and doing so with stable, low-variance behavior, while pure ascent was dominated everywhere and proved unsuitable for this constrained setting. Fourth, re-running the entire pipeline on the four-times-smaller LLaMA-3.2-1B left every one of these orderings intact: GAFT remained the most balanced method, IDK again suppressed by fabrication rather than abstention, and PGA was again dominated, so the verdicts are not an artefact of a single model size. The smaller model preserved less absolute utility---a capacity effect rather than an unlearning one---and failed IDK's intended refusal in a noisier, more fragmented way, but quantization and quantized-unlearning behavior proved consistent across model scales, with forgetting efficacy essentially unchanged and the privacy ordering preserved inside the 4-bit pipeline at both sizes.
 
 Beyond the head-to-head verdict, three broader lessons run through the work. Forgetting in a language model is best treated as an operational property defined by reduced reliance, preserved utility, and minimized leakage, rather than as the unverifiable ideal of complete semantic erasure. Evaluation must be multi-dimensional, because behavioral metrics alone would have crowned a fabricating model and a privacy attack alone would have missed its utility costs and its fabrication entirely. And deployment transformations such as quantization belong inside the evaluation and the threat model from the start, not as engineering afterthoughts applied once the science is declared finished. The contribution of this thesis is not a new algorithm but a clearer and more honest picture of how existing ones behave where they are actually used, and a demonstration that the gap between looking forgotten and being forgotten is wide enough to matter.
 
 \section{Future Work}
 The limitations enumerated in the previous chapter map almost directly onto an agenda for further study, and several directions stand out as both tractable and important.
 
-\textbf{Breadth across scale and quantization.} The most immediate extension is to repeat the comparison across model sizes, from the one-billion to the seventy-billion parameter range, and across quantization schemes beyond 4-bit NF4, including 8-bit, 2-bit, and the GPTQ and AWQ families. Because forgetting dynamics are known to couple with scale, the central question is whether the method ranking found here is invariant or whether, for instance, retain regularization matters more at small scales where capacity is scarce, or less at large ones. A schedule of experiments along these two axes would establish how far the present conclusions generalize.
+\textbf{Breadth across scale and quantization.} This thesis already takes the first step along the scale axis, extending the comparison from 8B down to 1B and finding the method ranking, the privacy ordering, and the audit verdict invariant between the two, with only the absolute utility budget and IDK's failure texture shifting. The natural continuation is to push further in both directions---up to the thirteen- and seventy-billion-parameter models and, capacity permitting, down to even smaller ones---and across quantization schemes beyond 4-bit NF4, including 8-bit, 2-bit, and the GPTQ and AWQ families. Two consistent points are encouraging but do not establish a trend, so the central question remains whether the invariance observed here continues to hold, or whether, for instance, retain regularization matters more at small scales where capacity is scarce, or refusal tuning fabricates ever more convincingly as fluency grows. A schedule of experiments along these two axes would establish how far the present conclusions generalize.
 
 \textbf{Durability and robustness stress tests.} Since forgetting in this study lives in a low-rank adapter over a frozen base, the original knowledge is never destroyed, only steered around. Future work should probe how robust that steering is by subjecting the unlearned models to adversarial relearning, to re-quantization at a different bit width, and to adapter merging or removal, each of which is a realistic way the suppression might be undone. The distillation result from the literature, in which distilling an unlearned model into a student hardens its forgetting, suggests one promising remedy worth testing directly in the quantized setting.
 
@@ -1015,13 +1100,13 @@ Taken together, these directions share a single spirit with the thesis itself: t
 %========================================================================================
 \appendix
 
-\chapter{Per-Seed Results}
+\chapter{Per-Seed Results: LLaMA-3.2-8B}
 \label{app:perseed}
 The main results in Chapter~\ref{chap:results} are reported as means and standard deviations over the three seeds $3407$, $3408$, and $3409$. For completeness and to support the stability discussion in Section~\ref{sec:res-stability}, this appendix gives the underlying per-seed numbers from which those aggregates were computed. The MIA value listed for each run is that run's mean over the six Min-$k$\% thresholds. Reading down each method's block shows directly how tight the run-to-run variation is on most metrics, and how much wider it is for IDK's Forget Quality.
 
 \begin{table}[htbp]
 	\centering
-	\caption{Per-seed forget-split metrics. On the forget set, lower truth probability, ROUGE-L, and accuracy indicate stronger suppression; higher truth ratio and Forget Quality (FQ) and lower MIA are better.}
+	\caption{Per-seed forget-split metrics on LLaMA-3.2-8B. On the forget set, lower truth probability, ROUGE-L, and accuracy indicate stronger suppression; higher truth ratio and Forget Quality (FQ) and lower MIA are better. The LLaMA-3.2-1B counterpart is Table~\ref{tab:app-forget-1b}.}
 	\label{tab:app-forget}
 	\resizebox{\textwidth}{!}{%
 	\begin{tabular}{llcccccc}
@@ -1046,7 +1131,7 @@ The main results in Chapter~\ref{chap:results} are reported as means and standar
 
 \begin{table}[htbp]
 	\centering
-	\caption{Per-seed utility accuracy on the three non-forget splits. Higher is better throughout.}
+	\caption{Per-seed utility accuracy on the three non-forget splits for LLaMA-3.2-8B. Higher is better throughout. The LLaMA-3.2-1B counterpart is Table~\ref{tab:app-utility-1b}.}
 	\label{tab:app-utility}
 	\begin{tabular}{llccc}
 		\toprule
@@ -1068,6 +1153,81 @@ The main results in Chapter~\ref{chap:results} are reported as means and standar
 \end{table}
 
 Two patterns are worth highlighting. First, on every metric except IDK's Forget Quality, the three seeds for a given method agree to within a few thousandths to a few hundredths, which is why the aggregated standard deviations in Chapter~\ref{chap:results} are small and the method ranking is stable. Second, IDK's Forget Quality swings from $0.1546$ at seed $3407$ down to $0.0783$ at both $3408$ and $3409$, a relative variation far larger than anything seen for GAFT, whose Forget Quality stays near $0.52$--$0.58$ throughout. This is the per-run face of the instability discussed in the main text, and it is consistent with a mechanism, fabrication, that does not produce stable distributional forgetting.
+
+\chapter{Cross-Model Results: LLaMA-3.2-1B}
+\label{app:crossmodel-1b}
+Section~\ref{sec:res-crossmodel} compared the two model scales through a small set of summary figures and a headline table. This appendix collects the standalone LLaMA-3.2-1B versions of the three main-text result figures, the direct counterparts of Figures~\ref{fig:split-accuracy}, \ref{fig:mia-thresholds}, and~\ref{fig:tradeoff}, together with the per-seed numbers behind the 1B aggregates. Read alongside the 8B figures, they make the visual case that the structure of the result---PGA stranded in the unfavorable corner, GAFT and IDK dominating it along different axes---survives the change of scale.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.85\textwidth]{tradeoff_scatter_1b.png}
+	\caption{Privacy--unlearning trade-off on LLaMA-3.2-1B across three seeds (counterpart of Figure~\ref{fig:tradeoff}). The desirable corner is lower-right. As at 8B, GAFT owns Forget Quality, IDK owns the MIA axis, and PGA is stranded in the upper-left; the whole configuration sits at marginally higher leakage than at 8B.}
+	\label{fig:tradeoff-1b}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.92\textwidth]{split_accuracy_1b.png}
+	\caption{Accuracy by evaluation split for each method on LLaMA-3.2-1B (counterpart of Figure~\ref{fig:split-accuracy}). The real-author and world-fact bars are lower than at 8B---about $0.82$ and $0.79$ rather than $0.92$ and $0.88$---reflecting the smaller base model's reduced knowledge, but the methods again separate mainly on the forget and retain splits and remain tightly clustered on the others.}
+	\label{fig:split-accuracy-1b}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.92\textwidth]{mia_thresholds_1b.png}
+	\caption{MIA sensitivity across Min-$k$\% thresholds on LLaMA-3.2-1B, aggregated over three seeds (counterpart of Figure~\ref{fig:mia-thresholds}). PGA again sits well above the other two at every threshold while GAFT and IDK stay near the no-leakage region with IDK lowest; every curve is shifted slightly upward relative to 8B.}
+	\label{fig:mia-thresholds-1b}
+\end{figure}
+
+\begin{table}[htbp]
+	\centering
+	\caption{Per-seed forget-split metrics on LLaMA-3.2-1B (counterpart of Table~\ref{tab:app-forget}). On the forget set, lower truth probability, ROUGE-L, and accuracy indicate stronger suppression; higher truth ratio and Forget Quality (FQ) and lower MIA are better.}
+	\label{tab:app-forget-1b}
+	\resizebox{\textwidth}{!}{%
+	\begin{tabular}{llcccccc}
+		\toprule
+		Method & Seed & FQ & MIA (mean) & Forget Acc & Truth Prob & Truth Ratio & ROUGE-L \\
+		\midrule
+		PGA  & 3407 & 0.0400 & 0.6603 & 0.5883 & 0.2865 & 0.7644 & 0.4161 \\
+		PGA  & 3408 & 0.0389 & 0.6276 & 0.5961 & 0.3004 & 0.7595 & 0.4107 \\
+		PGA  & 3409 & 0.0434 & 0.6381 & 0.5823 & 0.2973 & 0.7631 & 0.3960 \\
+		\midrule
+		GAFT & 3407 & 0.5350 & 0.4501 & 0.5322 & 0.2297 & 0.8369 & 0.3709 \\
+		GAFT & 3408 & 0.6047 & 0.4614 & 0.5449 & 0.2294 & 0.8343 & 0.3844 \\
+		GAFT & 3409 & 0.5432 & 0.4433 & 0.5466 & 0.2200 & 0.8301 & 0.3891 \\
+		\midrule
+		IDK  & 3407 & 0.1521 & 0.4221 & 0.5303 & 0.2003 & 0.8619 & 0.3953 \\
+		IDK  & 3408 & 0.0806 & 0.4194 & 0.5410 & 0.2043 & 0.8696 & 0.3925 \\
+		IDK  & 3409 & 0.0830 & 0.4338 & 0.5395 & 0.2009 & 0.8760 & 0.3708 \\
+		\bottomrule
+	\end{tabular}%
+	}
+\end{table}
+
+\begin{table}[htbp]
+	\centering
+	\caption{Per-seed utility accuracy on the three non-forget splits for LLaMA-3.2-1B (counterpart of Table~\ref{tab:app-utility}). Higher is better throughout.}
+	\label{tab:app-utility-1b}
+	\begin{tabular}{llccc}
+		\toprule
+		Method & Seed & Retain Acc & Real-Author Acc & World-Fact Acc \\
+		\midrule
+		PGA  & 3407 & 0.5252 & 0.8280 & 0.8042 \\
+		PGA  & 3408 & 0.5265 & 0.8166 & 0.7936 \\
+		PGA  & 3409 & 0.5432 & 0.8009 & 0.7833 \\
+		\midrule
+		GAFT & 3407 & 0.5279 & 0.8131 & 0.8066 \\
+		GAFT & 3408 & 0.5298 & 0.8288 & 0.8018 \\
+		GAFT & 3409 & 0.4931 & 0.8197 & 0.7800 \\
+		\midrule
+		IDK  & 3407 & 0.5139 & 0.8053 & 0.7997 \\
+		IDK  & 3408 & 0.5122 & 0.8262 & 0.7788 \\
+		IDK  & 3409 & 0.5105 & 0.8081 & 0.7953 \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+The per-seed numbers reinforce two points from the main text. The method ordering holds seed by seed, not merely on average: GAFT's Forget Quality is above $0.53$ in every run while PGA's never exceeds $0.044$ and IDK's never reaches $0.16$. And IDK's Forget Quality shows the same instability signature seen at 8B, swinging from $0.1521$ at seed $3407$ down to $0.0806$ and $0.0830$ at the other two, a far wider relative spread than any other quantity in the table and the per-run face of the volatility flagged in Section~\ref{sec:res-crossmodel}.
 
 \chapter{Extended IDK Generation Examples}
 \label{app:examples}

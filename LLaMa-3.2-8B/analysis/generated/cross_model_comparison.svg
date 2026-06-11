@@ -1,0 +1,186 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="760" viewBox="0 0 1000 760">
+<style>
+text { font-family: Arial, sans-serif; fill: #222; }
+.title { font-size: 22px; font-weight: bold; }
+.subtitle { font-size: 13px; fill: #555; }
+.ptitle { font-size: 16px; font-weight: bold; }
+.mlabel { font-size: 14px; font-weight: bold; }
+.tick { font-size: 11px; fill: #444; }
+.bval { font-size: 11px; fill: #222; }
+.legend { font-size: 14px; }
+.axis { stroke: #444; stroke-width: 1.2; }
+.grid { stroke: #e3e3e3; stroke-width: 1; }
+</style>
+<text x="500.0" y="30" text-anchor="middle" class="title">Cross-Model Comparison: LLaMA-3.2-8B vs LLaMA-3.2-1B</text>
+<text x="500.0" y="50" text-anchor="middle" class="subtitle">Three unlearning methods, mean over seeds 3407/3408/3409 (error bars: std. dev. across seeds)</text>
+<rect x="390.0" y="57" width="16" height="14" fill="#2e86ab" rx="2" />
+<text x="412.0" y="69" class="legend">LLaMA-3.2-8B</text>
+<rect x="540.0" y="57" width="16" height="14" fill="#e07a1f" rx="2" />
+<text x="562.0" y="69" class="legend">LLaMA-3.2-1B</text>
+<text x="260.0" y="112" text-anchor="middle" class="ptitle">Forget Quality ↑</text>
+<line x1="72" y1="378.0" x2="486.0" y2="378.0" class="grid" />
+<text x="64" y="382.0" text-anchor="end" class="tick">0.00</text>
+<line x1="72" y1="316.0" x2="486.0" y2="316.0" class="grid" />
+<text x="64" y="320.0" text-anchor="end" class="tick">0.18</text>
+<line x1="72" y1="254.0" x2="486.0" y2="254.0" class="grid" />
+<text x="64" y="258.0" text-anchor="end" class="tick">0.35</text>
+<line x1="72" y1="192.0" x2="486.0" y2="192.0" class="grid" />
+<text x="64" y="196.0" text-anchor="end" class="tick">0.53</text>
+<line x1="72" y1="130.0" x2="486.0" y2="130.0" class="grid" />
+<text x="64" y="134.0" text-anchor="end" class="tick">0.71</text>
+<line x1="72" y1="378.0" x2="486.0" y2="378.0" class="axis" />
+<line x1="72" y1="130" x2="72" y2="378.0" class="axis" />
+<rect x="97.9" y="364.2" width="38.3" height="13.8" fill="#2e86ab" rx="1.5" />
+<text x="117.0" y="351.2" text-anchor="middle" class="bval">0.04</text>
+<line x1="117.0" y1="362.6" x2="117.0" y2="365.9" stroke="#333" stroke-width="1.3" />
+<line x1="113.0" y1="362.6" x2="121.0" y2="362.6" stroke="#333" stroke-width="1.3" />
+<line x1="113.0" y1="365.9" x2="121.0" y2="365.9" stroke="#333" stroke-width="1.3" />
+<rect x="145.8" y="363.7" width="38.3" height="14.3" fill="#e07a1f" rx="1.5" />
+<text x="165.0" y="350.7" text-anchor="middle" class="bval">0.04</text>
+<line x1="165.0" y1="362.9" x2="165.0" y2="364.5" stroke="#333" stroke-width="1.3" />
+<line x1="161.0" y1="362.9" x2="169.0" y2="362.9" stroke="#333" stroke-width="1.3" />
+<line x1="161.0" y1="364.5" x2="169.0" y2="364.5" stroke="#333" stroke-width="1.3" />
+<text x="141.0" y="402.0" text-anchor="middle" class="mlabel">PGA</text>
+<rect x="235.9" y="187.6" width="38.3" height="190.4" fill="#2e86ab" rx="1.5" />
+<text x="255.0" y="174.6" text-anchor="middle" class="bval">0.54</text>
+<line x1="255.0" y1="175.9" x2="255.0" y2="199.3" stroke="#333" stroke-width="1.3" />
+<line x1="251.0" y1="175.9" x2="259.0" y2="175.9" stroke="#333" stroke-width="1.3" />
+<line x1="251.0" y1="199.3" x2="259.0" y2="199.3" stroke="#333" stroke-width="1.3" />
+<rect x="283.8" y="181.2" width="38.3" height="196.8" fill="#e07a1f" rx="1.5" />
+<text x="303.0" y="168.2" text-anchor="middle" class="bval">0.56</text>
+<line x1="303.0" y1="167.8" x2="303.0" y2="194.6" stroke="#333" stroke-width="1.3" />
+<line x1="299.0" y1="167.8" x2="307.0" y2="167.8" stroke="#333" stroke-width="1.3" />
+<line x1="299.0" y1="194.6" x2="307.0" y2="194.6" stroke="#333" stroke-width="1.3" />
+<text x="279.0" y="402.0" text-anchor="middle" class="mlabel">GAFT</text>
+<rect x="373.9" y="341.6" width="38.3" height="36.4" fill="#2e86ab" rx="1.5" />
+<text x="393.0" y="328.6" text-anchor="middle" class="bval">0.10</text>
+<line x1="393.0" y1="326.2" x2="393.0" y2="357.1" stroke="#333" stroke-width="1.3" />
+<line x1="389.0" y1="326.2" x2="397.0" y2="326.2" stroke="#333" stroke-width="1.3" />
+<line x1="389.0" y1="357.1" x2="397.0" y2="357.1" stroke="#333" stroke-width="1.3" />
+<rect x="421.8" y="341.1" width="38.3" height="36.9" fill="#e07a1f" rx="1.5" />
+<text x="441.0" y="328.1" text-anchor="middle" class="bval">0.11</text>
+<line x1="441.0" y1="326.9" x2="441.0" y2="355.3" stroke="#333" stroke-width="1.3" />
+<line x1="437.0" y1="326.9" x2="445.0" y2="326.9" stroke="#333" stroke-width="1.3" />
+<line x1="437.0" y1="355.3" x2="445.0" y2="355.3" stroke="#333" stroke-width="1.3" />
+<text x="417.0" y="402.0" text-anchor="middle" class="mlabel">IDK</text>
+<text x="740.0" y="112" text-anchor="middle" class="ptitle">Mean MIA (Min-k%) ↓</text>
+<line x1="552.0" y1="378.0" x2="966.0" y2="378.0" class="grid" />
+<text x="544.0" y="382.0" text-anchor="end" class="tick">0.00</text>
+<line x1="552.0" y1="316.0" x2="966.0" y2="316.0" class="grid" />
+<text x="544.0" y="320.0" text-anchor="end" class="tick">0.19</text>
+<line x1="552.0" y1="254.0" x2="966.0" y2="254.0" class="grid" />
+<text x="544.0" y="258.0" text-anchor="end" class="tick">0.39</text>
+<line x1="552.0" y1="192.0" x2="966.0" y2="192.0" class="grid" />
+<text x="544.0" y="196.0" text-anchor="end" class="tick">0.58</text>
+<line x1="552.0" y1="130.0" x2="966.0" y2="130.0" class="grid" />
+<text x="544.0" y="134.0" text-anchor="end" class="tick">0.78</text>
+<line x1="552.0" y1="378.0" x2="966.0" y2="378.0" class="axis" />
+<line x1="552.0" y1="130" x2="552.0" y2="378.0" class="axis" />
+<rect x="577.9" y="179.6" width="38.3" height="198.4" fill="#2e86ab" rx="1.5" />
+<text x="597.0" y="166.6" text-anchor="middle" class="bval">0.62</text>
+<line x1="597.0" y1="175.4" x2="597.0" y2="183.7" stroke="#333" stroke-width="1.3" />
+<line x1="593.0" y1="175.4" x2="601.0" y2="175.4" stroke="#333" stroke-width="1.3" />
+<line x1="593.0" y1="183.7" x2="601.0" y2="183.7" stroke="#333" stroke-width="1.3" />
+<rect x="625.8" y="173.1" width="38.3" height="204.9" fill="#e07a1f" rx="1.5" />
+<text x="645.0" y="160.1" text-anchor="middle" class="bval">0.64</text>
+<line x1="645.0" y1="167.8" x2="645.0" y2="178.5" stroke="#333" stroke-width="1.3" />
+<line x1="641.0" y1="167.8" x2="649.0" y2="167.8" stroke="#333" stroke-width="1.3" />
+<line x1="641.0" y1="178.5" x2="649.0" y2="178.5" stroke="#333" stroke-width="1.3" />
+<text x="621.0" y="402.0" text-anchor="middle" class="mlabel">PGA</text>
+<rect x="715.9" y="237.0" width="38.3" height="141.0" fill="#2e86ab" rx="1.5" />
+<text x="735.0" y="224.0" text-anchor="middle" class="bval">0.44</text>
+<line x1="735.0" y1="234.3" x2="735.0" y2="239.8" stroke="#333" stroke-width="1.3" />
+<line x1="731.0" y1="234.3" x2="739.0" y2="234.3" stroke="#333" stroke-width="1.3" />
+<line x1="731.0" y1="239.8" x2="739.0" y2="239.8" stroke="#333" stroke-width="1.3" />
+<rect x="763.8" y="233.9" width="38.3" height="144.1" fill="#e07a1f" rx="1.5" />
+<text x="783.0" y="220.9" text-anchor="middle" class="bval">0.45</text>
+<line x1="783.0" y1="231.0" x2="783.0" y2="236.8" stroke="#333" stroke-width="1.3" />
+<line x1="779.0" y1="231.0" x2="787.0" y2="231.0" stroke="#333" stroke-width="1.3" />
+<line x1="779.0" y1="236.8" x2="787.0" y2="236.8" stroke="#333" stroke-width="1.3" />
+<text x="759.0" y="402.0" text-anchor="middle" class="mlabel">GAFT</text>
+<rect x="853.9" y="244.9" width="38.3" height="133.1" fill="#2e86ab" rx="1.5" />
+<text x="873.0" y="231.9" text-anchor="middle" class="bval">0.42</text>
+<line x1="873.0" y1="242.7" x2="873.0" y2="247.2" stroke="#333" stroke-width="1.3" />
+<line x1="869.0" y1="242.7" x2="877.0" y2="242.7" stroke="#333" stroke-width="1.3" />
+<line x1="869.0" y1="247.2" x2="877.0" y2="247.2" stroke="#333" stroke-width="1.3" />
+<rect x="901.8" y="242.4" width="38.3" height="135.6" fill="#e07a1f" rx="1.5" />
+<text x="921.0" y="229.4" text-anchor="middle" class="bval">0.43</text>
+<line x1="921.0" y1="239.9" x2="921.0" y2="244.8" stroke="#333" stroke-width="1.3" />
+<line x1="917.0" y1="239.9" x2="925.0" y2="239.9" stroke="#333" stroke-width="1.3" />
+<line x1="917.0" y1="244.8" x2="925.0" y2="244.8" stroke="#333" stroke-width="1.3" />
+<text x="897.0" y="402.0" text-anchor="middle" class="mlabel">IDK</text>
+<text x="260.0" y="442.0" text-anchor="middle" class="ptitle">Utility Avg. Accuracy ↑</text>
+<line x1="72" y1="708.0" x2="486.0" y2="708.0" class="grid" />
+<text x="64" y="712.0" text-anchor="end" class="tick">0.00</text>
+<line x1="72" y1="646.0" x2="486.0" y2="646.0" class="grid" />
+<text x="64" y="650.0" text-anchor="end" class="tick">0.24</text>
+<line x1="72" y1="584.0" x2="486.0" y2="584.0" class="grid" />
+<text x="64" y="588.0" text-anchor="end" class="tick">0.47</text>
+<line x1="72" y1="522.0" x2="486.0" y2="522.0" class="grid" />
+<text x="64" y="526.0" text-anchor="end" class="tick">0.71</text>
+<line x1="72" y1="460.0" x2="486.0" y2="460.0" class="grid" />
+<text x="64" y="464.0" text-anchor="end" class="tick">0.95</text>
+<line x1="72" y1="708.0" x2="486.0" y2="708.0" class="axis" />
+<line x1="72" y1="460.0" x2="72" y2="708.0" class="axis" />
+<rect x="97.9" y="500.9" width="38.3" height="207.1" fill="#2e86ab" rx="1.5" />
+<text x="117.0" y="487.9" text-anchor="middle" class="bval">0.79</text>
+<line x1="117.0" y1="499.7" x2="117.0" y2="502.2" stroke="#333" stroke-width="1.3" />
+<line x1="113.0" y1="499.7" x2="121.0" y2="499.7" stroke="#333" stroke-width="1.3" />
+<line x1="113.0" y1="502.2" x2="121.0" y2="502.2" stroke="#333" stroke-width="1.3" />
+<rect x="145.8" y="521.0" width="38.3" height="187.0" fill="#e07a1f" rx="1.5" />
+<text x="165.0" y="508.0" text-anchor="middle" class="bval">0.71</text>
+<line x1="165.0" y1="519.7" x2="165.0" y2="522.3" stroke="#333" stroke-width="1.3" />
+<line x1="161.0" y1="519.7" x2="169.0" y2="519.7" stroke="#333" stroke-width="1.3" />
+<line x1="161.0" y1="522.3" x2="169.0" y2="522.3" stroke="#333" stroke-width="1.3" />
+<text x="141.0" y="732.0" text-anchor="middle" class="mlabel">PGA</text>
+<rect x="235.9" y="500.6" width="38.3" height="207.4" fill="#2e86ab" rx="1.5" />
+<text x="255.0" y="487.6" text-anchor="middle" class="bval">0.79</text>
+<line x1="255.0" y1="497.8" x2="255.0" y2="503.4" stroke="#333" stroke-width="1.3" />
+<line x1="251.0" y1="497.8" x2="259.0" y2="497.8" stroke="#333" stroke-width="1.3" />
+<line x1="251.0" y1="503.4" x2="259.0" y2="503.4" stroke="#333" stroke-width="1.3" />
+<rect x="283.8" y="521.6" width="38.3" height="186.4" fill="#e07a1f" rx="1.5" />
+<text x="303.0" y="508.6" text-anchor="middle" class="bval">0.71</text>
+<line x1="303.0" y1="518.4" x2="303.0" y2="524.7" stroke="#333" stroke-width="1.3" />
+<line x1="299.0" y1="518.4" x2="307.0" y2="518.4" stroke="#333" stroke-width="1.3" />
+<line x1="299.0" y1="524.7" x2="307.0" y2="524.7" stroke="#333" stroke-width="1.3" />
+<text x="279.0" y="732.0" text-anchor="middle" class="mlabel">GAFT</text>
+<rect x="373.9" y="503.6" width="38.3" height="204.4" fill="#2e86ab" rx="1.5" />
+<text x="393.0" y="490.6" text-anchor="middle" class="bval">0.78</text>
+<line x1="393.0" y1="502.8" x2="393.0" y2="504.4" stroke="#333" stroke-width="1.3" />
+<line x1="389.0" y1="502.8" x2="397.0" y2="502.8" stroke="#333" stroke-width="1.3" />
+<line x1="389.0" y1="504.4" x2="397.0" y2="504.4" stroke="#333" stroke-width="1.3" />
+<rect x="421.8" y="523.1" width="38.3" height="184.9" fill="#e07a1f" rx="1.5" />
+<text x="441.0" y="510.1" text-anchor="middle" class="bval">0.71</text>
+<line x1="441.0" y1="522.9" x2="441.0" y2="523.3" stroke="#333" stroke-width="1.3" />
+<line x1="437.0" y1="522.9" x2="445.0" y2="522.9" stroke="#333" stroke-width="1.3" />
+<line x1="437.0" y1="523.3" x2="445.0" y2="523.3" stroke="#333" stroke-width="1.3" />
+<text x="417.0" y="732.0" text-anchor="middle" class="mlabel">IDK</text>
+<text x="740.0" y="442.0" text-anchor="middle" class="ptitle">Seed Stability (Forget Quality σ) ↓</text>
+<line x1="552.0" y1="708.0" x2="966.0" y2="708.0" class="grid" />
+<text x="544.0" y="712.0" text-anchor="end" class="tick">0.000</text>
+<line x1="552.0" y1="646.0" x2="966.0" y2="646.0" class="grid" />
+<text x="544.0" y="650.0" text-anchor="end" class="tick">0.013</text>
+<line x1="552.0" y1="584.0" x2="966.0" y2="584.0" class="grid" />
+<text x="544.0" y="588.0" text-anchor="end" class="tick">0.026</text>
+<line x1="552.0" y1="522.0" x2="966.0" y2="522.0" class="grid" />
+<text x="544.0" y="526.0" text-anchor="end" class="tick">0.039</text>
+<line x1="552.0" y1="460.0" x2="966.0" y2="460.0" class="grid" />
+<text x="544.0" y="464.0" text-anchor="end" class="tick">0.052</text>
+<line x1="552.0" y1="708.0" x2="966.0" y2="708.0" class="axis" />
+<line x1="552.0" y1="460.0" x2="552.0" y2="708.0" class="axis" />
+<rect x="577.9" y="686.0" width="38.3" height="22.0" fill="#2e86ab" rx="1.5" />
+<text x="597.0" y="673.0" text-anchor="middle" class="bval">0.005</text>
+<rect x="625.8" y="696.8" width="38.3" height="11.2" fill="#e07a1f" rx="1.5" />
+<text x="645.0" y="683.8" text-anchor="middle" class="bval">0.002</text>
+<text x="621.0" y="732.0" text-anchor="middle" class="mlabel">PGA</text>
+<rect x="715.9" y="548.8" width="38.3" height="159.2" fill="#2e86ab" rx="1.5" />
+<text x="735.0" y="535.8" text-anchor="middle" class="bval">0.033</text>
+<rect x="763.8" y="526.3" width="38.3" height="181.7" fill="#e07a1f" rx="1.5" />
+<text x="783.0" y="513.3" text-anchor="middle" class="bval">0.038</text>
+<text x="759.0" y="732.0" text-anchor="middle" class="mlabel">GAFT</text>
+<rect x="853.9" y="497.8" width="38.3" height="210.2" fill="#2e86ab" rx="1.5" />
+<text x="873.0" y="484.8" text-anchor="middle" class="bval">0.044</text>
+<rect x="901.8" y="514.4" width="38.3" height="193.6" fill="#e07a1f" rx="1.5" />
+<text x="921.0" y="501.4" text-anchor="middle" class="bval">0.041</text>
+<text x="897.0" y="732.0" text-anchor="middle" class="mlabel">IDK</text>
+</svg>

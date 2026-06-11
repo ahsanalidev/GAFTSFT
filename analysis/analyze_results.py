@@ -8,6 +8,18 @@ from statistics import mean, stdev
 
 ROOT = Path(__file__).resolve().parents[1]
 MODELS = ["LLaMa-3.2-8B", "LLaMa-3.2-1B"]
+# The seeded results live under one of these per-model subdirectories. The
+# folder was renamed from "results_with_seed" to "results"; accept either so the
+# pipeline works regardless of which layout is on disk.
+RESULTS_DIR_NAMES = ["results_with_seed", "results"]
+
+
+def resolve_results_dir(model_dir):
+    for name in RESULTS_DIR_NAMES:
+        candidate = model_dir / name
+        if candidate.exists():
+            return candidate
+    return None
 
 METHOD_LABELS = {
     "PureGradientAscent": "PGA",
@@ -90,15 +102,15 @@ def build_run_row(method_dir_name, result_path):
 def find_seed_result_files(model_dir):
     """Find all seeded result files for a specific model."""
     run_map = {method_dir: [] for method_dir in METHOD_ORDER}
-    results_with_seed_dir = model_dir / "results_with_seed"
-    
-    if not results_with_seed_dir.exists():
+    results_dir = resolve_results_dir(model_dir)
+
+    if results_dir is None:
         return run_map
 
     for method_dir in METHOD_ORDER:
         pattern = f"{method_dir}_seed_*/important.json"
-        run_map[method_dir] = sorted(results_with_seed_dir.glob(pattern))
-    
+        run_map[method_dir] = sorted(results_dir.glob(pattern))
+
     return run_map
 
 
