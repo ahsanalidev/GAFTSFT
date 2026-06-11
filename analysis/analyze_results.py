@@ -7,9 +7,7 @@ from statistics import mean, stdev
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RESULTS_DIR = ROOT / "results"
-RESULTS_WITH_SEED_DIR = ROOT / "results"
-OUT_DIR = ROOT / "analysis" / "generated"
+MODELS = ["LLaMa-3.2-8B", "LLaMa-3.2-1B"]
 
 METHOD_LABELS = {
     "PureGradientAscent": "PGA",
@@ -89,43 +87,34 @@ def build_run_row(method_dir_name, result_path):
     return row
 
 
-def find_seed_result_files():
+def find_seed_result_files(model_dir):
+    """Find all seeded result files for a specific model."""
     run_map = {method_dir: [] for method_dir in METHOD_ORDER}
-    if not RESULTS_WITH_SEED_DIR.exists():
+    results_with_seed_dir = model_dir / "results_with_seed"
+    
+    if not results_with_seed_dir.exists():
         return run_map
 
     for method_dir in METHOD_ORDER:
         pattern = f"{method_dir}_seed_*/important.json"
-        run_map[method_dir] = sorted(RESULTS_WITH_SEED_DIR.glob(pattern))
+        run_map[method_dir] = sorted(results_with_seed_dir.glob(pattern))
+    
     return run_map
 
 
-def find_single_run_result_files():
-    run_map = {method_dir: [] for method_dir in METHOD_ORDER}
-    if not RESULTS_DIR.exists():
-        return run_map
-
-    for method_dir in METHOD_ORDER:
-        base_dir = RESULTS_DIR / method_dir
-        for filename in ("important.json", "tofu.json"):
-            candidate = base_dir / filename
-            if candidate.exists():
-                run_map[method_dir] = [candidate]
-                break
-    return run_map
-
-
-def load_results():
+def load_results_for_model(model_dir):
+    """Load results for a specific model."""
     run_rows = []
-    run_map = find_seed_result_files()
-    if not any(run_map.values()):
-        run_map = find_single_run_result_files()
+    run_map = find_seed_result_files(model_dir)
 
     for method_dir in METHOD_ORDER:
         for result_path in run_map.get(method_dir, []):
             run_rows.append(build_run_row(method_dir, result_path))
 
     summary_rows = []
+    if not run_rows:
+        return run_rows, summary_rows
+    
     grouped = {}
     for row in run_rows:
         grouped.setdefault(row["method"], []).append(row)
@@ -156,9 +145,11 @@ def load_results():
     return run_rows, summary_rows
 
 
-def write_csv(rows, filename):
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    csv_path = OUT_DIR / filename
+def write_csv(rows, filename, output_dir):
+    output_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = output_dir / filename
+    if not rows:
+        return csv_path
     fieldnames = list(rows[0].keys())
     with csv_path.open("w", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=fieldnames)
@@ -175,8 +166,8 @@ def fmt_with_std(row, key):
     return f"{fmt(row[key])} $\\pm$ {fmt(row[f'{key}_std'])}"
 
 
-def write_latex_tables(rows):
-    tables_path = OUT_DIR / "latex_tables.tex"
+def write_latex_tables(rows, output_dir):
+    tables_path = output_dir / "latex_tables.tex"
     by_method = {row["method"]: row for row in rows}
     ordered = [by_method[m] for m in ["PGA", "GAFT", "IDK"] if m in by_method]
 
@@ -242,7 +233,7 @@ def save_svg(path, lines):
     return path
 
 
-def plot_tradeoff(rows):
+def plot_tradeoff(rows, output_dir):
     width, height = 760, 520
     left, right, top, bottom = 80, 30, 60, 70
     plot_w = width - left - right
@@ -300,10 +291,10 @@ def plot_tradeoff(rows):
         lines.append(f'<text x="{cx+10}" y="{cy-10}" class="label">{row["method"]} (n={row["n_runs"]})</text>')
 
     lines.extend(svg_footer())
-    return save_svg(OUT_DIR / "tradeoff_scatter.svg", lines)
+    return save_svg(output_dir / "tradeoff_scatter.svg", lines)
 
 
-def plot_split_accuracy(rows):
+def plot_split_accuracy(rows, output_dir):
     width, height = 860, 540
     left, right, top, bottom = 90, 30, 60, 80
     plot_w = width - left - right
@@ -372,10 +363,10 @@ def plot_split_accuracy(rows):
         lines.append(f'<text x="{legend_x+22}" y="{y+1}" class="small">{split_labels[split]}</text>')
 
     lines.extend(svg_footer())
-    return save_svg(OUT_DIR / "split_accuracy.svg", lines)
+    return save_svg(output_dir / "split_accuracy.svg", lines)
 
 
-def plot_mia_thresholds(rows):
+def plot_mia_thresholds(rows, output_dir):
     width, height = 820, 520
     left, right, top, bottom = 90, 40, 60, 70
     plot_w = width - left - right
@@ -441,26 +432,39 @@ def plot_mia_thresholds(rows):
         lines.append(f'<text x="{legend_x+26}" y="{y}" class="small">{method}</text>')
 
     lines.extend(svg_footer())
-    return save_svg(OUT_DIR / "mia_thresholds.svg", lines)
+    return save_svg(output_dir / "mia_thresholds.svg", lines)
 
 
-def write_findings(rows):
-    findings_path = OUT_DIR / "findings.md"
+def write_findings(rows, output_dir):
+    findings_path = output_dir / "findings.md"
     by_method = {row["method"]: row for row in rows}
-    gaft = by_method["GAFT"]
-    idk = by_method["IDK"]
-    pga = by_method["PGA"]
+    gaft = by_method.get("GAFT")
+    idk = by_method.get("IDK")
+    pga = by_method.get("PGA")
 
     lines = [
         "# Result Analysis",
         "",
         "## Strongest findings from the current JSON summaries",
         "",
-        f"- GAFT has the strongest Forget Quality ({fmt_with_std(gaft, 'forget_quality')}) across {gaft['n_runs']} runs.",
-        f"- IDK has the lowest mean MIA score ({fmt_with_std(idk, 'mia_mean')}), improving over GAFT by {fmt(gaft['mia_mean'] - idk['mia_mean'])} and over PGA by {fmt(pga['mia_mean'] - idk['mia_mean'])}.",
-        f"- GAFT keeps the best overall utility average across non-forget splits ({fmt_with_std(gaft, 'utility_avg_acc')}), with especially strong real-author accuracy ({fmt_with_std(gaft, 'real_author_acc')}).",
-        f"- PGA has the worst privacy profile: highest mean MIA ({fmt_with_std(pga, 'mia_mean')}) and weakest Forget Quality ({fmt_with_std(pga, 'forget_quality')}).",
-        f"- IDK is still the most suppression-oriented method, lowering forget accuracy to {fmt_with_std(idk, 'forget_acc')} while also showing the lowest retain accuracy ({fmt_with_std(idk, 'retain_acc')}).",
+    ]
+
+    if gaft:
+        lines.append(f"- GAFT has the strongest Forget Quality ({fmt_with_std(gaft, 'forget_quality')}) across {gaft['n_runs']} runs.")
+    
+    if idk and gaft and pga:
+        lines.append(f"- IDK has the lowest mean MIA score ({fmt_with_std(idk, 'mia_mean')}), improving over GAFT by {fmt(gaft['mia_mean'] - idk['mia_mean'])} and over PGA by {fmt(pga['mia_mean'] - idk['mia_mean'])}.")
+    
+    if gaft:
+        lines.append(f"- GAFT keeps the best overall utility average across non-forget splits ({fmt_with_std(gaft, 'utility_avg_acc')}), with especially strong real-author accuracy ({fmt_with_std(gaft, 'real_author_acc')}).")
+    
+    if pga:
+        lines.append(f"- PGA has the worst privacy profile: highest mean MIA ({fmt_with_std(pga, 'mia_mean')}) and weakest Forget Quality ({fmt_with_std(pga, 'forget_quality')}).")
+    
+    if idk:
+        lines.append(f"- IDK is still the most suppression-oriented method, lowering forget accuracy to {fmt_with_std(idk, 'forget_acc')} while also showing the lowest retain accuracy ({fmt_with_std(idk, 'retain_acc')}).")
+
+    lines.extend([
         "",
         "## Suggested paper additions",
         "",
@@ -471,23 +475,39 @@ def write_findings(rows):
         "",
         "## Manuscript check",
         "",
-        f"- The paper should now report aggregated numbers, not a single run. The current PGA Forget Quality aggregate is {fmt_with_std(pga, 'forget_quality')}.",
-    ]
+    ])
+
+    if pga:
+        lines.append(f"- The paper should now report aggregated numbers, not a single run. The current PGA Forget Quality aggregate is {fmt_with_std(pga, 'forget_quality')}.")
+
     findings_path.write_text("\n".join(lines) + "\n")
     return findings_path
 
 
 def main():
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    run_rows, summary_rows = load_results()
-    write_csv(run_rows, "results_runs.csv")
-    write_csv(summary_rows, "results_summary.csv")
-    write_latex_tables(summary_rows)
-    plot_tradeoff(summary_rows)
-    plot_split_accuracy(summary_rows)
-    plot_mia_thresholds(summary_rows)
-    write_findings(summary_rows)
-    print(f"Wrote analysis artifacts to {OUT_DIR}")
+    for model in MODELS:
+        model_dir = ROOT / model
+        if not model_dir.exists():
+            print(f"⚠️  Model directory not found: {model_dir}")
+            continue
+        
+        print(f"Processing {model}...")
+        out_dir = model_dir / "analysis" / "generated"
+        
+        run_rows, summary_rows = load_results_for_model(model_dir)
+        
+        if not summary_rows:
+            print(f"  ⚠️  No results found for {model}")
+            continue
+        
+        write_csv(run_rows, "results_runs.csv", out_dir)
+        write_csv(summary_rows, "results_summary.csv", out_dir)
+        write_latex_tables(summary_rows, out_dir)
+        plot_tradeoff(summary_rows, out_dir)
+        plot_split_accuracy(summary_rows, out_dir)
+        plot_mia_thresholds(summary_rows, out_dir)
+        write_findings(summary_rows, out_dir)
+        print(f"✓ Wrote analysis artifacts to {out_dir}")
 
 
 if __name__ == "__main__":
