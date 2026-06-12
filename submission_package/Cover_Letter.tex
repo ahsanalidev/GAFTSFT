@@ -1,0 +1,61 @@
+%% Cover letter for submission to
+%% IEEE Transactions on Dependable and Secure Computing (TDSC)
+%% Compiles with a basic LaTeX install (no special packages required).
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\setlength{\textwidth}{6.5in}
+\setlength{\oddsidemargin}{0in}
+\setlength{\evensidemargin}{0in}
+\setlength{\textheight}{9in}
+\setlength{\topmargin}{-0.5in}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.8em}
+\usepackage{url}
+\pagestyle{empty}
+
+\begin{document}
+
+% ----- Sender block -----
+Syed Ahsan Ali \\
+Department of Computer Science and Information Technology \\
+NED University of Engineering and Technology \\
+Karachi, Pakistan \\
+Email: mrahsanali5@gmail.com \\
+ORCID: 0009-0002-3763-929X
+
+\vspace{1.0em}
+\today
+
+\vspace{1.0em}
+% ----- Addressee ----- (insert the current EiC name if known)
+Prof.\ Jaideep Vaidya \\
+Editor-in-Chief, IEEE Transactions on Dependable and Secure Computing \\
+Rutgers University, USA
+
+\vspace{0.8em}
+Dear Prof.\ Vaidya,
+
+\textbf{Re: Submission of original manuscript --- ``Does the Model Really Forget? On the Dependability and Privacy of Targeted Unlearning in 4-Bit Quantized Large Language Models''}
+
+We are pleased to submit the above manuscript for consideration as a regular paper in the \emph{IEEE Transactions on Dependable and Secure Computing}. The work studies whether machine unlearning for large language models (LLMs) remains dependable, in the joint sense of forgetting effectively, preserving utility, and resisting privacy attacks, when it is performed under the memory-constrained conditions that govern real deployment rather than the idealized full-precision settings of most prior work. We believe its focus on the dependability, privacy, and trustworthiness of a security-relevant capability in deployed machine-learning systems aligns closely with the scope of TDSC.
+
+The motivation is a concrete security concern. Unlearning is increasingly required to honor data-deletion and ``right to be forgotten'' obligations, yet it is almost always validated in full precision, while production systems serve compressed models that combine 4-bit quantization with low-rank adaptation, and quantization has recently been shown to \emph{reverse} forgetting. We therefore treat quantization as part of the threat surface and evaluate three representative unlearning strategies---pure gradient ascent, retain-regularized gradient ascent, and refusal (``I do not know'') tuning---entirely inside a 4-bit quantized, LoRA-based pipeline on LLaMA-3-8B, across three random seeds, using the TOFU benchmark together with a Min-$k$\% membership inference attack.
+
+Our principal findings are threefold and, we believe, of direct interest to the dependable-computing community. First, the unlearning objective dominates the outcome, producing qualitatively different privacy--utility trade-offs rather than minor variations. Second, and most importantly, a generation-level audit of 1{,}200 forget-set outputs reveals that the refusal method's strong suppression and low membership-leakage scores are an artifact of confident \emph{fabrication}: it almost never abstains and instead replaces deleted facts with hallucinated substitutes in $86.1\%$ of cases. Low answer overlap, the signal the field commonly treats as evidence of deletion, can thus correspond to a new trustworthiness failure rather than to secure removal. Third, the retain-regularized objective offers the most dependable balance under quantization. We conclude that quantization belongs inside the threat model and that dependable unlearning requires joint behavioral, privacy, and generation-level evaluation.
+
+\textbf{Relationship to a prior conference version.} A preliminary, shorter version of this work has been accepted at the IEEE/IFIP International Workshop on Dependable and Secure Machine Learning (DSML), 2026. The present manuscript is a substantially extended version, with more than 30\% new material. The principal additions are: (i) a new threat model and dependability-oriented problem formulation (Section~III); (ii) a considerably expanded treatment of related work; (iii) the behavioral audit of forget-set generations promoted to a full section with new qualitative analysis and representative examples distinguishing abstention from fabrication; (iv) per-seed analyses and an expanded results discussion; and (v) a thorough treatment of limitations and threats to validity. The conference version is cited in the manuscript, and no part of this submission is under consideration at any other venue.
+
+We confirm that this manuscript is original, has not been published elsewhere, and is not currently under review by any other journal; that all named authors have approved the submission and agree to its content; and that we have no conflicts of interest to declare. The complete code required to reproduce our experiments is publicly available at \url{https://github.com/ahsanalidev/GAFTSFT}.
+
+Thank you for considering our submission. We look forward to the reviewers' feedback and are happy to provide any further information required.
+
+\vspace{1.2em}
+Sincerely,
+
+\vspace{1.6em}
+Syed Ahsan Ali \\
+\emph{(on behalf of all authors: Syed Ahsan Ali and Muhammad Umer Farooq)} \\
+Corresponding author --- mrahsanali5@gmail.com
+
+\end{document}

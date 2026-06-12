@@ -1,0 +1,18 @@
+FIGURE CAPTIONS
+(Figures are provided as separate files: Figure_1.png, Figure_2.png, Figure_3.png)
+
+Figure 1. Accuracy by evaluation split for each method (PGA, GAFT, IDK). The
+forget bar should be low and the other three high. All three methods preserve
+real-author and world-fact accuracy; the methods separate mainly on the forget
+and retain splits.
+
+Figure 2. MIA (membership inference) score across Min-k% thresholds, aggregated
+over three seeds. A score near 0.5 indicates no leakage. PGA sits above the
+other two methods at every threshold, while GAFT and IDK remain near the
+no-leakage region, with IDK consistently the lowest.
+
+Figure 3. Privacy-unlearning trade-off across three seeds. Points denote
+seed-averaged positions and error bars denote approximate 95% confidence
+intervals. The desirable corner is lower-right (high Forget Quality, low MIA).
+GAFT reaches the far right on Forget Quality; IDK reaches the bottom on MIA;
+PGA is stranded in the upper-left (worst) corner.

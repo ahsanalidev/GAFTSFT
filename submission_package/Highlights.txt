@@ -1,0 +1,7 @@
+Highlights
+
+- We evaluate LLM unlearning entirely inside a 4-bit quantized LoRA pipeline
+- The unlearning objective drives large privacy-utility trade-off differences
+- Refusal tuning rarely abstains: 86% of forget answers are hallucinated
+- Retain-regularized gradient ascent gives the most dependable balance
+- Quantization belongs in the threat model; low answer overlap is not deletion

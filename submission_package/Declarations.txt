@@ -1,0 +1,57 @@
+DECLARATIONS
+Manuscript: "Does the Model Really Forget? On the Dependability and Privacy of
+Targeted Unlearning in 4-Bit Quantized Large Language Models"
+Authors: Syed Ahsan Ali; Muhammad Umer Farooq
+
+(Each statement below can be pasted into the corresponding field of the journal
+submission system, or kept together in this single file.)
+
+====================================================================
+1. ETHICAL DECLARATION (STATEMENT OF ETHICS)
+====================================================================
+This study did not involve human participants, animal subjects, or the
+collection of any personal, private, or identifiable data. All experiments were
+conducted on the publicly available TOFU benchmark, which consists entirely of
+synthetic, fictitious author profiles created specifically for unlearning
+research. No information about real individuals was used or processed. The
+authors confirm that the work was carried out in accordance with accepted
+standards of research integrity and good scientific practice.
+
+====================================================================
+2. AI USE DECLARATION
+====================================================================
+Generative AI tools were used primarily to assist with drafting and language
+editing of the manuscript. All research ideas, the experimental design, the
+implementation and code, the experiments, the resulting data, and the analysis
+and interpretation of results are the authors' own original work, carried out
+by S. A. Ali under the supervision and direction of M. U. Farooq. The authors
+reviewed, verified, and edited all AI-assisted text and take full responsibility
+for the entire content of the manuscript. Generative AI was not used to generate,
+alter, or fabricate any data, results, figures, or citations, and no AI tool is
+listed as an author.
+
+====================================================================
+3. CONFLICT OF INTEREST STATEMENT
+====================================================================
+The authors declare that they have no known competing financial interests or
+personal relationships that could have appeared to influence the work reported
+in this paper.
+
+====================================================================
+4. DATA AVAILABILITY STATEMENT
+====================================================================
+This work uses the publicly available TOFU benchmark. The source code,
+experimental configuration, and the result files that support the findings of
+this study, including the per-seed evaluation metrics, the membership-inference
+outputs, and the behavioral-audit data, are openly available in the project
+repository at https://github.com/ahsanalidev/GAFTSFT. No restricted or
+proprietary data were generated during this study.
+
+====================================================================
+5. AUTHOR CONTRIBUTION STATEMENT (CRediT taxonomy)
+====================================================================
+Syed Ahsan Ali: Conceptualization, Methodology, Software, Investigation,
+Formal analysis, Data curation, Visualization, Writing - original draft.
+
+Muhammad Umer Farooq: Conceptualization, Supervision, Validation,
+Writing - review and editing.
